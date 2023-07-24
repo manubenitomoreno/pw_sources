@@ -1,56 +1,74 @@
-
- 
-"""
-============================================================================
-============================================================================
-GATHERER FOR CATASTRO SOURCE - SPAIN
-============================================================================
-CONTRIBUITORS: MANU BENITO
-============================================================================
-"""     
-#IMPORTS
-import requests, zipfile, io, subprocess, sys
-from sources.factory import *
-from os import listdir, remove, makedirs, path
-from os.path import exists, join, isfile
+import requests, zipfile, io, subprocess
+from os import listdir, remove, makedirs, environ, remove
+from os.path import exists, join
 import pandas as pd
 import geopandas as gpd
 import numpy as np
 from loguru import logger
-#import logging
-#logger = logging.getLogger()
-import time
 
-#GLOBALS
-#repos = r"C:\Users\ManuBenito\Documents\GitHub"
-#sys.path.append(repos)
-from sources.catastro_metadata import *
+from sources.metadata.catastro_metadata import *
 
-def find_muni(code):
+#GATHER FUNCTIONALITY
+
+
+def find_muni(code: str) -> tuple:
+    """
+    Searches for municipality code in LISTMUNI. Make sure this list is up to date.
+    
+    Parameters:
+    code (str): A string with municipality code 
+
+    Returns:
+    tuple: A tuple with a boolean indicating if the municipality was found and the municipality itself
+    """
     found = [m for m in LISTMUNI if m.split("-")[0] == code][0]
     if found:
+        logger.info(f"Found {code} in API reference")
         return True, found
     else:
-        return False
-        
-def gml2geojson(input, output):
-    """ Convert a GML to a GeoJSON file """
+        logger.error(f"Check code {code}. Code not found.")
+        return False, None
+
+def gml2geojson(input: str, output: str) -> None:
+    """
+    Convert a GML to a GeoJSON file.
+    
+    Parameters:
+    input (str): Input GML file path
+    output (str): Output GeoJSON file path
+
+    Returns:
+    None
+    """
+    environ['PROJ_LIB'] = 'C:\\Users\\ManuBenito\\Documents\\GitHub\\pw_sources\\venv\\lib\\site-packages\\pyproj\\proj_dir\\share\\proj'
     try:
-        connect_command = """ogr2ogr -f GeoJSON {} {} -a_srs EPSG:25830""".format(output, input)
-        #logging.INFO("\n Executing: ", connect_command)
+        # If output file already exists, delete it
+        if exists(output):
+            logger.info(f"GEOJson already exist for {output}. Deleting")
+            remove(output)
+            
+        connect_command = f"ogr2ogr -f GeoJSON {output} {input} -a_srs EPSG:25830 -skipfailures"
         process = subprocess.Popen(connect_command, shell=True)
         process.communicate()
         process.wait()
-        #logging.INFO("GML", input, "converted to", output + ".geojson")
+        logger.info(f"GML {input} converted to {output}.geojson")
     except Exception as err:
-        #logging.INFO("Failed to convert to GeoJSON from GML")
+        logger.error(f"Failed to convert to GeoJSON from GML: {err}")
         raise
-    return
 
-def download_cadastral_data(codes: list, outdir:str):
+def download_cadastral_data(codes: list, outdir:str) -> None:
+    """
+    Download cadastral data for given codes and save in specified directory.
+    
+    Parameters:
+    codes (list): List of municipality codes
+    outdir (str): Output directory to save the data
+
+    Returns:
+    None
+    """
     outdir = outdir+r"\level0\spatial"
     for code in codes:
-
         assert find_muni(code)[0], f"Municipality with code {code} not found"
         
         muni = find_muni(code)[1]
@@ -62,31 +80,28 @@ def download_cadastral_data(codes: list, outdir:str):
         outdir_muni = r"{outdir}\{codmun}".format(outdir=outdir,codmun=codmun)
         if not exists(outdir_muni):
             makedirs(outdir_muni)
-        else:
-            pass
 
         urls = {'CadastralParcels' : f"http://www.catastro.minhap.es/INSPIRE/CadastralParcels/{codprov}/{codine_nomcatastro}/A.ES.SDGC.CP.{codmun}.zip",
                 'Addresses' : f"http://www.catastro.minhap.es/INSPIRE/Addresses/{codprov}/{codine_nomcatastro}/A.ES.SDGC.AD.{codmun}.zip",
                 'Buildings' : f"http://www.catastro.minhap.es/INSPIRE/Buildings/{codprov}/{codine_nomcatastro}/A.ES.SDGC.BU.{codmun}.zip"}
 
-        for layer,url in urls.items():
+        for layer, url in urls.items():
             logger.info(f"Getting URL {url}")
             r = requests.get(url)
             if r:
                 z = zipfile.ZipFile(io.BytesIO(r.content))
                 z.extractall(outdir_muni)
             else:
-                logger.info(f'Warning: Municipality {codine_nomcatastro} had no response from ATOM')
+                logger.warning(f'Municipality {codine_nomcatastro} had no response from ATOM')
                 continue
         
         layers = {"AD": "addresses","building": "building","buildingpart": "buildingpart","otherconstruction": "otherconstruction", "cadastralparcel": "cadastralparcel","cadastralzoning": "cadastralzoning"}
         
         for gml in [join(outdir_muni, f) for f in listdir(outdir_muni) if code in f and f.endswith(("gml"))]:
-            for particle,layer in layers.items():
+            for particle, layer in layers.items():
                 if particle in gml:
                     gml2geojson(gml, outdir_muni+f"\{layer}_{codmun}.geojson")
                     
-
         for otherfile in [join(outdir_muni, f) for f in listdir(outdir_muni) if code in f and not f.endswith(("geojson"))]:
             remove(otherfile)
         
@@ -94,16 +109,7 @@ def download_cadastral_data(codes: list, outdir:str):
         
         logger.info(f"Municipality {muni} was successfully downloaded and processed")
 
-"""
-============================================================================
-============================================================================
-LEVEL0 FOR CATASTRO SOURCE - SPAIN
-============================================================================
-CONTRIBUITORS: MANU BENITO
-============================================================================
-Reads .CAT and addresses files and merges them coherently, then searches for
-relevant land use units and builds a spatial data table
-"""
+#LEVEL0
 
 def find_muni(code: str) -> bool:
     """
@@ -159,7 +165,7 @@ def open_cat_file(cadastre_path: str) -> pd.DataFrame:
     raw_tables = {n:pd.DataFrame(df0[df0['reg']==n]) for n in ['11','13','14','15']} #We are interested in this four
     #Now we slice the tables according to our metadata
     for register,df in raw_tables.items():
-        for field,separators in cat_file_registers[register].items():
+        for field,separators in CAT_FILE_REGISTERS[register].items():
             df[field] = df['raw'].str.slice(separators[0],separators[1]).str.strip()
         df.drop(columns = ['raw','reg'], axis = 1, inplace = True)
     #And merge according to their inner logic
@@ -175,9 +181,9 @@ def column_strategy(df: pd.DataFrame) -> pd.DataFrame:
     :return: The processed dataframe
     """
     import numpy as np
-    for col in column_treatment:
-        if column_treatment[col]['strategy']!='None':
-            df[col] = eval(column_treatment[col]['strategy'])
+    for col in COLUMN_TREATMENT:
+        if COLUMN_TREATMENT[col]['strategy']!='None':
+            df[col] = eval(COLUMN_TREATMENT[col]['strategy'])
         else:
             pass
     return df
@@ -237,15 +243,15 @@ def build_use_names(gdf: gpd.GeoDataFrame) -> gpd.GeoDataFrame:
     gdf['Property Cadastral ID'] = gdf['Parcel Cadastral ID']+"-"+gdf['Property ID']
     gdf['Part Area in Cadastral Terms'] = gdf['Part Area in Cadastral Terms'].fillna("0").astype(int)
     gdf['Part Typology'] = gdf['Part Typology'].str[:-1].fillna("00")
-    gdf['Property Land Use Level1'] = gdf['Property General Use'].replace(land_use)
-    gdf['Part Land Use Level1'] = gdf['Part Detailed Use'].str[0].replace(land_use)
-    gdf['Part Land Use Level2'] = gdf['Part Detailed Use'].replace(land_use)
-    gdf['Part Typology Level1'] = gdf['Part Typology'].str[0:2].replace(typology)
-    gdf['Part Typology Level2'] = gdf['Part Typology'].str[0:3].replace(typology)
-    gdf['Part Typology Level3'] = gdf['Part Typology'].str[0:4].replace(typology)
+    gdf['Property Land Use Level1'] = gdf['Property General Use'].replace(LAND_USE)
+    gdf['Part Land Use Level1'] = gdf['Part Detailed Use'].str[0].replace(LAND_USE)
+    gdf['Part Land Use Level2'] = gdf['Part Detailed Use'].replace(LAND_USE)
+    gdf['Part Typology Level1'] = gdf['Part Typology'].str[0:2].replace(TYPOLOGY)
+    gdf['Part Typology Level2'] = gdf['Part Typology'].str[0:3].replace(TYPOLOGY)
+    gdf['Part Typology Level3'] = gdf['Part Typology'].str[0:4].replace(TYPOLOGY)
     return gdf
 
-def process_cadastral_data(path: str, codes: str, merge = 'Addresses') -> gpd.GeoDataFrame:
+def process_cadastral_data(path: str, codes: str) -> gpd.GeoDataFrame:
     """
     Reads the corresponding addresses file
     :df: The joined cadastral registers dataframe
@@ -269,18 +275,7 @@ def process_cadastral_data(path: str, codes: str, merge = 'Addresses') -> gpd.Ge
         gdf['y'] = gdf['geometry'].y
         gdf.to_parquet(path+r"\level1\{municipality}.parquet".format(municipality=municipality))
     
-"""
-============================================================================
-============================================================================
-LEVEL1 FOR CATASTRO SOURCE - SPAIN
-============================================================================
-CONTRIBUITORS: MANU BENITO
-============================================================================
-TRANSFORM DATA INTO WALKNET FORMATS
-"""
-#CLASSES = ['Property Land Use Level1', 'Part Typology Level1', 'Part Typology Level2', 'Part Typology Level3', 'Part Land Use Level1', 'Part Land Use Level2']
-#logging.info(f"Classes loaded: {CLASSES}")
-
+#LEVEL1
 
 def apply_logic(df: pd.DataFrame, combination_tuple: tuple, end_type: str, category):
     """
@@ -343,10 +338,17 @@ def transform_data(gdf):
     gdf['class'] = 'pois'
     gdf['category'] = 'land use'
     gdf['provider'] = 'Dirección General de Catastro'
-    gdf['data'] = json_data(gdf,datacols,'id' )
+    gdf['data'] = json_data(gdf, DATACOLS, 'id' )
     gdf['geometry'] = gpd.GeoSeries(gpd.points_from_xy(gdf['x'], gdf['y'])).to_wkt()
     return gdf[['id','class','category','provider','data','geometry']]
 
+def transform_cadastral_data(path: str, codes: str):
+    path = f"{path}\level1"
+    for code in codes:
+        npath = [join(path, f) for f in listdir(path) if f.startswith(code)][0]
+        df = pd.read_parquet(npath)
+        df = transform_data(df)
+        df.to_csv('{newpath}\level2_catastro_{code}.csv'.format(newpath= path.replace("level1","level2"), code = code),sep =";")
 """
 ============================================================================
 ============================================================================
@@ -356,16 +358,15 @@ CONTRIBUITORS: MANU BENITO
 ============================================================================
 """
 
+def gather(source_instance, **kwargs):
+    download_cadastral_data(codes = kwargs.get('codes'), outdir=kwargs.get('path'))
 
-def gather(path: str, codes:list):
-    download_cadastral_data(codes, path)
-    #logging.INFO('Gathering data for...')
-def level0(path: str, codes:list):
-    process_cadastral_data(path, codes)
-    #logging.INFO('Processing level0 for...')
-def level1(path: str, source: str):#, codes:list):
-    transformer = DataTransformer(r"{path}\level1".format(path = path), r"{path}\level2".format(path = path), 10, source)
-    transformer.transform(transform_data, source)
+def level0(source_instance, **kwargs):
+    process_cadastral_data(path=kwargs.get('path'), codes = kwargs.get('codes'))
     
+def level1(source_instance, **kwargs):
+    transform_cadastral_data(path=kwargs.get('path'), codes = kwargs.get('codes'))
+
+
     #transform_cadastral_data(path, codes)
     #logging.INFO('Processing level1 for...')

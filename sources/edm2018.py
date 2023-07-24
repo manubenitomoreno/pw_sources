@@ -2,8 +2,10 @@
 
 import pandas as pd
 import re 
+from loguru import logger
 
-from sources.edm2018_metadata import *  
+
+from sources.metadata.edm2018_metadata import *  
 """
 ============================================================================
 ============================================================================
@@ -54,10 +56,10 @@ def map_columns(df: pd.DataFrame, mapper: dict):
         df[c] = df[c].replace(mapper[c])
     return df
 
-def process_edm_data(path: str, files: dict, schemas: dict):
+def process_edm_data(path: str):
     
-    data = read_data(path, files, schemas)
-    codes = read_codes(path, files, schemas)
+    data = read_data(path, FILES, SCHEMAS)
+    codes = read_codes(path, FILES, SCHEMAS)
     codes = {k:fill_in_order(df.query('VALORES.notnull()', engine='python')) for k,df in codes.items()}
     codes = {k:parse_codes(df) for k,df in codes.items()}
     codes = {n: {k : g.LITERAL.to_dict() for k, g in df.set_index('CODIGO').groupby('VARIABLE')} for n,df in codes.items()}
@@ -91,14 +93,12 @@ CONTRIBUITORS: MANU BENITO
 ============================================================================
 """
 
-#def gather(path: str, codes:list):
-    #download_cadastral_data(codes, path)
-    #logging.DEBUG('Gathering data for...')
-#def level0(path: str, codes:list):
-    #process_cadastral_data(path, codes)
-    #logging.INFO('Processing level0 for...')
-def level1(path: str):
-    process_edm_data(path, files, schemas)
-    #logging.INFO('Processing level1 for...')
+def gather(source_instance, **kwargs):
+    logger.info("EDM does not have a gather mode implemented. Jus check the website and download the excel and shapefile files")
+def level0(source_instance, **kwargs):
+    process_edm_data(path = kwargs.get('path'))
+#def level1(path: str):
+    #transform_edm_data(path, codes)
+    logger.info("This transformation is not uploaded to the database just yet")
 #def persist():
-    #logging.INFO('Persisting data for...')
+    

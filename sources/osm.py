@@ -6,15 +6,8 @@ from OSMPythonTools.overpass import overpassQueryBuilder, Overpass
 import pandas as pd
 import geopandas as gpd
 
-from sources.edm2018_metadata import *  
-"""
-============================================================================
-============================================================================
-GATHERER FOR OSM SOURCE - GLOBAL
-============================================================================
-CONTRIBUITORS: MANU BENITO, NURIA BLANCO
-============================================================================
-"""
+#GATHERER
+
 nominatim = Nominatim()
 overpass = Overpass()
 
@@ -43,10 +36,10 @@ def get_features(area : str, keywords:dict):
         out='body',
         includeGeometry=True))
     
-def download_osm_data(outdir: str, areas: list, categories: dict):
+def download_osm_data(path: str, areas: list, categories: dict):
     data = {}
-    for area in areas:
-        area = nominatim.query(area, wkt=True)
+    for area_name in areas:
+        area = nominatim.query(area_name, wkt=True)
         gdf = pd.concat(
             [gpd.GeoDataFrame(
                 osm_frame(
@@ -57,35 +50,17 @@ def download_osm_data(outdir: str, areas: list, categories: dict):
                     categories[cat]['color'])
                 ) for cat in categories]
             )
-        data[area] = gdf
-    """
+        
+        data[area_name] = gdf
+    
     for k,v in data.items():
-        print(k)
+        outdir = f"{path}\level0"
         out_data = r"{outdir}\level0_osm_{d}.parquet".format(outdir=outdir,d=k)
+        print(v)
         v.to_parquet(out_data)
-    """
-    return data
-"""
-============================================================================
-============================================================================
-LEVEL1 FOR OSM SOURCE - GLOBAL
-============================================================================
-CONTRIBUITORS: MANU BENITO
-============================================================================
-"""  
 
-"""
-============================================================================
-============================================================================
-MAIN FUNCTIONS FOR OSM SOURCE - GLOBAL
-============================================================================
-CONTRIBUITORS: MANU BENITO
-============================================================================
-"""
-
-def gather(path: str, areas, categories):
-    download_osm_data(path, areas, categories)
-    #logging.DEBUG('Gathering data for...')
+def gather(source_instance, **kwargs):
+    download_osm_data(path=kwargs.get('path'), areas= kwargs.get('areas'),  categories= kwargs.get('categories'))
 #def level0(path: str, codes:list):
     #process_cadastral_data(path, codes)
     #logging.INFO('Processing level0 for...')

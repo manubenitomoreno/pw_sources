@@ -10,10 +10,10 @@ GATHERER FOR INE GEO SOURCE - SPAIN
 CONTRIBUITORS: MANU BENITO
 ============================================================================
 """  
-def download_ine_geo_data(codes, path):
+def download_ine_geo_data(years, path):
     
-    for code in codes:
-        URL = f"https://www.ine.es/prodyser/cartografia/seccionado_{code}.zip"
+    for year in years:
+        URL = f"https://www.ine.es/prodyser/cartografia/seccionado_{year}.zip"
         r = requests.get(URL)
         z = zipfile.ZipFile(io.BytesIO(r.content))
         z.extractall(f"{path}\level0")
@@ -103,11 +103,9 @@ def process_ine_geo_data(codes, path):
         process_ine_geo_layer(path, code, gdf)
             
         
-def gather(path: str, codes:list):
-    download_ine_geo_data(codes, path)
-    #logging.DEBUG('Gathering data for...')
-def level1(path: str, codes:list):
-    process_ine_geo_data(codes, path)
-    #logging.INFO('Processing level1 for...')
+def gather(source_instance, **kwargs):
+    download_ine_geo_data(path = kwargs.get('path'))
+def level1(source_instance, **kwargs):
+    process_ine_geo_data(codes = kwargs.get('codes'), path = kwargs.get('path'))
 #def persist():
     #logging.INFO('Persisting data for...')
