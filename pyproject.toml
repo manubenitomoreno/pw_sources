@@ -1,0 +1,24 @@
+[build-system]
+requires = ["setuptools", "wheel"]
+build-backend = "setuptools.build_meta"
+
+[tool.setuptools]
+install_requires = [
+    "requests>=2.24.0",
+    "numpy>=1.19.1,<2.0.0",
+]
+name = "my-awesome-project"
+version = "0.1.0"
+description = "A brief description of my awesome project"
+author = "Your Name"
+author_email = "your.email@example.com"
+license = "MIT"
+
+[tool.setuptools.scripts]
+console_scripts = [
+    "my-script = my_module:main",
+]
+
+[classifiers]
+License :: OSI Approved :: MIT License
+Programming Language :: Python :: 3.10
