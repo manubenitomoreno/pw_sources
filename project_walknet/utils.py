@@ -5,6 +5,54 @@ from os import remove
 from sqlalchemy import create_engine
 from sqlalchemy.sql import text
 
+from loguru import logger
+import time
+
+import multiprocessing
+from functools import wraps
+
+def parallelize(func):
+    @wraps(func)
+    def wrapper(*args, **kwargs):
+        with multiprocessing.Pool(multiprocessing.cpu_count()) as pool:
+            result = pool.map(func, args[0])
+        return result
+    return wrapper
+
+
+def timeit(func):
+    def wrapper(*args, **kwargs):
+        start_time = time.time()
+        result = func(*args, **kwargs)
+        end_time = time.time()
+        execution_time = end_time - start_time
+        logger.info(f'Execution time for {func.__name__}: {execution_time} seconds')
+        return result
+    return wrapper
+
+import time
+from loguru import logger
+
+def time_iter(func):
+    start_time = time.time()
+    num_iterations = 0
+
+    def wrapper(*args, **kwargs):
+        nonlocal num_iterations
+        result = func(*args, **kwargs)
+        num_iterations += 1
+        elapsed_time = time.time() - start_time
+        if elapsed_time >= 60:  # Every minute
+            iterations_per_minute = num_iterations / (elapsed_time / 60)
+            logger.info(f"{func.__name__} processed {iterations_per_minute} iterations per minute.")
+            # reset counters
+            start_time = time.time()
+            num_iterations = 0
+        return result
+
+    return wrapper
+
+
 class DBInterface(): 
     
     def __init__(self,table,data,**kwargs):
