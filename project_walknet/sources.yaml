@@ -1,0 +1,41 @@
+osm:
+  provider: Open Street Map
+  table: pois
+  description: >
+    Open Street Map takes query dictionaries in the form that OSMPythonTools establish. Areas can be called by name. We use municipalities here, but make sure the names are accessed by Nominatim
+  categories: {
+    'park':{'elementType':['way','relation'],'selector':'"leisure"="park"','color':'green'},
+    'square':{'elementType':['way','relation'],'selector':'"place"="square"','color':'black'},
+    'pedestrian':{'elementType':['way','relation'],'selector':'"highway"="pedestrian"','color':'black'},
+    'forest':{'elementType':['way','relation'],'selector':'"landuse"="forest"','color':'green'},
+    'bus-stop':{'elementType':'node','selector':'"highway"="bus_stop"','color':'red'},
+    'subway-stop': {'elementType':'node','selector':'"railway"="subway_entrance"','color':'red'}
+    }
+  areas: ['Alcalá de Henares']
+
+catastro:
+  provider: Dirección General de Catastro
+  table: pois
+  description: >
+    Takes only Province-Municipality codes. 
+  codes: ['28005']
+
+ine_adrh:
+  provider: Instituto Nacional de Estadística
+  table: boundary_data
+  description: 
+  codes: ['28005']
+  years: ['2018']
+
+ine_geo:
+  provider: Instituto Nacional de Estadística
+  table: boundary_geo
+  description:
+  years: ['2018']
+
+edm2018:
+  provider: Consorcio Regional de Transportes de Madrid
+  table: trip_data
+  codes: ['005']
+
+
