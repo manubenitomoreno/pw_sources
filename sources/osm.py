@@ -6,6 +6,9 @@ from OSMPythonTools.overpass import overpassQueryBuilder, Overpass
 import pandas as pd
 import geopandas as gpd
 
+from loguru import logger
+
+
 #GATHERER
 
 nominatim = Nominatim()
@@ -78,11 +81,7 @@ def transform_osm(path: str, areas: list, provider: int):
 
 def gather(source_instance, **kwargs):
     download_osm_data(path=kwargs.get('path'), areas= kwargs.get('areas'),  categories= kwargs.get('categories'))
-#def level0(path: str, codes:list):
-    #process_cadastral_data(path, codes)
-    #logging.INFO('Processing level0 for...')
+def level0(source_instance, **kwargs):
+    logger.warning('level0 is not needed in this source')
 def level1(source_instance, **kwargs):
     transform_osm(path=kwargs.get('path'), areas= kwargs.get('areas'),provider=kwargs.get('provider'))
-    #logging.INFO('Processing level1 for...')
-#def persist():
-    #logging.INFO('Persisting data for...')
