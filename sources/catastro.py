@@ -322,7 +322,7 @@ def json_data(data, columns, idx):
     #logging.info(f'Making JSON DATA columns...')
     return d
 
-def transform_data(gdf):
+def transform_data(gdf, provider: int):
     #logging.info(f'Transforming data...')
     CLASSES = ['Property Land Use Level1', 'Part Typology Level1', 'Part Typology Level2', 'Part Typology Level3', 'Part Land Use Level1', 'Part Land Use Level2']
     RELATIONS = pd.read_excel(r"C:\Users\ManuBenito\Documents\GitHub\walknet\sources\spain\landuse\catastro\metadata\relations.xls")
@@ -336,19 +336,20 @@ def transform_data(gdf):
     #logging.info(f'Building last columns...')
     gdf['id'] = np.arange(0,len(gdf),1)
     gdf['class'] = 'pois'
-    gdf['category'] = 'land use'
-    gdf['provider'] = 'Dirección General de Catastro'
+    gdf['category'] = 'land use - general'
+    gdf['provider'] = provider
+    gdf['id'] = gdf['provider'].astype(str)+"-"+gdf['id'].astype(str)
     gdf['data'] = json_data(gdf, DATACOLS, 'id' )
     gdf['geometry'] = gpd.GeoSeries(gpd.points_from_xy(gdf['x'], gdf['y'])).to_wkt()
     return gdf[['id','class','category','provider','data','geometry']]
 
-def transform_cadastral_data(path: str, codes: str):
+def transform_cadastral_data(path: str, codes: str, provider: int):
     path = f"{path}\level1"
     for code in codes:
         npath = [join(path, f) for f in listdir(path) if f.startswith(code)][0]
         df = pd.read_parquet(npath)
-        df = transform_data(df)
-        df.to_csv('{newpath}\level2_catastro_{code}.csv'.format(newpath= path.replace("level1","level2"), code = code),sep =";")
+        df = transform_data(df, provider)
+        df.to_csv('{newpath}\level2_catastro_{code}.csv'.format(newpath= path.replace("level1","level2"), code = code),sep =";",index=False)
 """
 ============================================================================
 ============================================================================
@@ -365,7 +366,7 @@ def level0(source_instance, **kwargs):
     process_cadastral_data(path=kwargs.get('path'), codes = kwargs.get('codes'))
     
 def level1(source_instance, **kwargs):
-    transform_cadastral_data(path=kwargs.get('path'), codes = kwargs.get('codes'))
+    transform_cadastral_data(path=kwargs.get('path'), codes = kwargs.get('codes'), provider=kwargs.get('provider'))
 
 
     #transform_cadastral_data(path, codes)

@@ -43,7 +43,7 @@ class Source:
         # Combine the attributes from sources.yaml and the method call's kwargs
         attributes = {**self.metadata, **kwargs, **self.additional_attributes, 'path': self.path}
         # Remove 'provider' and 'table' attributes from the attributes dictionary
-        attributes.pop('provider', None)
+        #attributes.pop('provider', None)
         attributes.pop('table', None)
         attributes.pop('description', None)
 

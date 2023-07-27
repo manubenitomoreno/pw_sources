@@ -1,5 +1,11 @@
+amm_network: 
+  provider: 3
+  table: road_segments
+  codes: ['999']
+  kinds: ['VIA']
+
 osm:
-  provider: Open Street Map
+  provider: 2
   table: pois
   description: >
     Open Street Map takes query dictionaries in the form that OSMPythonTools establish. Areas can be called by name. We use municipalities here, but make sure the names are accessed by Nominatim
@@ -14,27 +20,27 @@ osm:
   areas: ['Alcalá de Henares']
 
 catastro:
-  provider: Dirección General de Catastro
+  provider: 1
   table: pois
   description: >
     Takes only Province-Municipality codes. 
   codes: ['28005']
 
 ine_adrh:
-  provider: Instituto Nacional de Estadística
+  provider: 3
   table: boundary_data
   description: 
   codes: ['28005']
   years: ['2018']
 
 ine_geo:
-  provider: Instituto Nacional de Estadística
+  provider: 4
   table: boundary_geo
   description:
   years: ['2018']
 
 edm2018:
-  provider: Consorcio Regional de Transportes de Madrid
+  provider: 5
   table: trip_data
   codes: ['005']
 

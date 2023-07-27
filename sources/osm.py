@@ -55,17 +55,34 @@ def download_osm_data(path: str, areas: list, categories: dict):
     
     for k,v in data.items():
         outdir = f"{path}\level0"
-        out_data = r"{outdir}\level0_osm_{d}.parquet".format(outdir=outdir,d=k)
-        print(v)
-        v.to_parquet(out_data)
+        out_data = r"{outdir}\level0_osm_{d}.csv".format(outdir=outdir,d=k)
+        v.to_csv(out_data,sep=";", index = False)
+
+def json_data(data, columns, idx):
+    d =  pd.Series(data.set_index(idx)[[c for c in columns if c in data.columns]].to_dict(orient='records'))
+    d = d.astype(str).str.replace("'",'"')
+    #logging.info(f'Making JSON DATA columns...')
+    return d
+
+def transform_osm(path: str, areas: list, provider: int):
+    DATACOLS = ['type','tags','color']
+    for area in areas:
+        df = pd.read_csv(r"{path}\level0\level0_osm_{d}.csv".format(path=path,d=area),sep=";")
+        df['provider'] = provider
+        df['category'] = 'land use'+" - "+df['type']
+        df['class'] = 'pois'
+        df['data'] = json_data(df, DATACOLS, 'id' )
+        df['id'] = df['provider'].astype(str)+"-"+df['id'].astype(int).astype(str)
+        df = df[['id', 'class', 'category', 'provider', 'data','geometry']]
+        df.to_csv(r"{path}\level2\level2_osm_{d}.csv".format(path=path,d=area),sep=";",index=False)
 
 def gather(source_instance, **kwargs):
     download_osm_data(path=kwargs.get('path'), areas= kwargs.get('areas'),  categories= kwargs.get('categories'))
 #def level0(path: str, codes:list):
     #process_cadastral_data(path, codes)
     #logging.INFO('Processing level0 for...')
-#def level1(path: str):
-    #process_edm_data(path, files, schemas)
+def level1(source_instance, **kwargs):
+    transform_osm(path=kwargs.get('path'), areas= kwargs.get('areas'),provider=kwargs.get('provider'))
     #logging.INFO('Processing level1 for...')
 #def persist():
     #logging.INFO('Persisting data for...')
