@@ -1,5 +1,7 @@
 import os
 import sys
+import shutil
+
 
 # Add the parent directory to the system path
 parent_dir = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
@@ -7,6 +9,7 @@ sys.path.append(parent_dir)
 
 import argparse
 from project_walknet.source_factory import Source
+from project_walknet.db_models import DBManager, Base
 from loguru import logger
 from configparser import ConfigParser
 
@@ -26,9 +29,6 @@ def list_available_sources():
         logger.warning("sources.yaml file not found.")
         
 def display_config_params():
-    """
-    Display parameters from the config.ini file.
-    """
     # Initialize ConfigParser and read the config.ini file from the parent directory
     config_file_path = os.path.join(parent_dir, 'config.ini')
     config = ConfigParser()
@@ -38,27 +38,23 @@ def display_config_params():
     repository_path = config.get('PATHS_WN', 'REPOSITORY')
 
     # Access and display parameters from the [BBDD_CONNECTION] section
-    db_name = config.get('BBDD_CONNECTION', 'ddbb')
-    db_host = config.get('BBDD_CONNECTION', 'host')
-    db_port = config.get('BBDD_CONNECTION', 'port')
-    db_user = config.get('BBDD_CONNECTION', 'user')
-    db_password = config.get('BBDD_CONNECTION', 'password')
+    host = config.get('BBDD_CONNECTION', 'host')
+    port = config.get('BBDD_CONNECTION', 'port')
+    user = config.get('BBDD_CONNECTION', 'user')
+    database = config.get('BBDD_CONNECTION', 'ddbb')
 
     # Access and display parameters from the [DATALAKE] section
     datalake_path = config.get('DATALAKE', 'path')
     datalake_temp_path = config.get('DATALAKE', 'temp')
 
-    # Mask the password with asterisks except for the first character
-    masked_db_password = db_password[0] + '*' * (len(db_password) - 1)
-
     logger.info(f"Repository Path: {repository_path}")
-    logger.info(f"Database Name: {db_name}")
-    logger.info(f"Database Host: {db_host}")
-    logger.info(f"Database Port: {db_port}")
-    logger.info(f"Database User: {db_user}")
-    logger.info(f"Database Password: {masked_db_password}")
+    logger.info(f"Database Host: {host}")
+    logger.info(f"Database Port: {port}")
+    logger.info(f"Database User: {user}")
+    logger.info(f"Database Name: {database}")
     logger.info(f"Datalake Path: {datalake_path}")
     logger.info(f"Datalake Temp Path: {datalake_temp_path}")
+
 
 def main():
     """
@@ -69,7 +65,12 @@ def main():
     parser.add_argument("action", nargs="?", help="The action to perform (gather/level0/level1/level2/persist).")
     parser.add_argument("--list-sources", action="store_true", help="List available sources and exit.")
     parser.add_argument("--config-params", action="store_true", help="Display parameters from config.ini and exit.", 
-                        dest="config_params")  # Specify a dest name for the argument
+                        dest="config_params")
+    parser.add_argument("--reset-db", action="store_true", help="Reset the database and exit.", 
+                        dest="reset_db")
+    parser.add_argument("--reset-source", nargs="?", const="all", default=None, 
+                        help="Reset a source (delete all its files) or all sources. Provide source keyname or 'all'.", 
+                        dest="reset_source")
     args = parser.parse_args()
 
     if args.list_sources:
@@ -79,12 +80,53 @@ def main():
     if args.config_params:
         display_config_params()
         sys.exit(0)
+        
+    if args.reset_db:
+        response = input("Are you sure you want to reset the database? This will delete all data. Y/N: ")
+        if response.lower() == "y":
+            db = DBManager()
+            db.drop_all_tables()  # This will drop all tables in the public schema
+            db.create_all()  # Create all tables based on your SQLAlchemy models
+            print("Database reset successfully.")
+        else:
+            print("Database reset cancelled.")
+        sys.exit(0)
 
-    if not args.keyname or not args.action:
-        parser.error("Both 'keyname' and 'action' arguments are required.")
-    
-    source = Source(keyname=args.keyname)
-    source.run(args.action)
+    if args.reset_source:
+        datalake_path = Source.cfg.get('DATALAKE', 'path')
+        if args.reset_source.lower() == 'all':
+            response = input("Are you sure you want to delete all files in the Datalake? This will delete all source data. Y/N: ")
+            if response.lower() == 'y':
+                # Delete the datalake directory entirely
+                shutil.rmtree(datalake_path)
+                # Recreate the empty datalake directory
+                os.mkdir(datalake_path)
+                print("Datalake reset successfully.")
+            else:
+                print("Datalake reset cancelled.")
+        else:
+            # Delete a specific source directory in the datalake
+            source_dir = os.path.join(datalake_path, args.reset_source)
+            if os.path.isdir(source_dir):
+                response = input(f"Are you sure you want to delete all files for source {args.reset_source} in the Datalake? This will delete the source's data. Y/N: ")
+                if response.lower() == 'y':
+                    # Delete the source directory
+                    shutil.rmtree(source_dir)
+                    # Recreate the empty source directory
+                    os.mkdir(source_dir)
+                    print(f"Source {args.reset_source} reset successfully.")
+                else:
+                    print(f"Reset of source {args.reset_source} cancelled.")
+            else:
+                print(f"Source {args.reset_source} not found in the Datalake.")
+        sys.exit(0)
+        
+
+    if args.keyname and args.action:
+        source = Source(keyname=args.keyname)
+        source.run(args.action)
+    elif not args.list_sources and not args.config_params and not args.reset_db and not args.reset_source:
+        parser.error("Either --keyname and --action, or one of --list-sources, --config-params, --reset-db, --reset-source must be provided.")
 
 if __name__ == "__main__":
     main()
