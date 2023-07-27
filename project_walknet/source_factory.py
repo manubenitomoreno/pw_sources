@@ -8,6 +8,8 @@ from typing import Optional
 from loguru import logger
 import time
 
+from db_models import DBManager
+
 class Source:
     cfg = ConfigParser()
     parent_dir = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
@@ -19,6 +21,7 @@ class Source:
         self.metadata = {}
         self.load_metadata()
         self.additional_attributes = kwargs
+        self.db = DBManager()
 
     def load_metadata(self):
         try:
@@ -31,26 +34,53 @@ class Source:
                 logger.warning(f"Metadata for '{self.keyname}' not found in sources.yaml.")
         except FileNotFoundError:
             logger.warning("sources.yaml file not found.")
+            
+    def persist(self, **kwargs):
+        # Use self.db to perform DB operations
+        if self.db.table_exists(self.metadata['table']):
+            
+            # Get the SQLAlchemy class for the given table
+            table_class = self.db.get_table_class(self.metadata['table'])
 
+            # Path to the level 2 data
+            level2_data_path = os.path.join(self.path, 'level2')
+            
+            # Loop through all the csv files in the directory
+            for filename in os.listdir(level2_data_path):
+                if filename.endswith('.csv'):
+                    
+                    # Construct the full file path
+                    csv_file_path = os.path.join(level2_data_path, filename)
+
+                    # Add data from the csv file to the database
+                    self.db.add_data_from_csv(table_class, csv_file_path)
+
+                    
     def run(self, level: str, **kwargs) -> None:
-        s = import_module(f"sources.{self.keyname}", ['gather', 'level0', 'level1', 'level2', 'persist'])
-        assert level in ['gather', 'level0', 'level1', 'level2', 'persist'], "Specify a correct level to process"
-        source_method = getattr(s, level)
-
-        # Log when a source is called and the action being performed
+        s = import_module(f"sources.{self.keyname}", ['gather', 'level0', 'level1', 'persist'])
+        assert level in ['gather', 'level0', 'level1', 'persist'], "Specify a correct level to process"
+        
         logger.info(f"Calling source: {self.keyname}, Action: {level}")
+        
+        attributes = {**self.metadata, **kwargs, **self.additional_attributes, 'path': self.path}
+        
+        logger.info(f"{self.keyname} - Processing started at: {time.strftime('%Y-%m-%d %H:%M:%S')}")
+        
+        if level in ['gather', 'level0', 'level1']:
+            source_method = getattr(s, level)
+            source_method(self, **attributes) 
+        elif level == 'persist':
+            logger.info("Attempting to upload into DB...")
+            self.persist()
+            
+        logger.info(f"{self.keyname} - Processing finished at: {time.strftime('%Y-%m-%d %H:%M:%S')}")
 
         # Combine the attributes from sources.yaml and the method call's kwargs
-        attributes = {**self.metadata, **kwargs, **self.additional_attributes, 'path': self.path}
-        # Remove 'provider' and 'table' attributes from the attributes dictionary
-        #attributes.pop('provider', None)
-        attributes.pop('table', None)
-        attributes.pop('description', None)
+        
+#        attributes.pop('description', None)
 
         # Log the start time of processing
-        logger.info(f"{self.keyname} - Processing started at: {time.strftime('%Y-%m-%d %H:%M:%S')}")
+        
+        
 
-        source_method(self, **attributes)  # Pass the self instance here
-
-        # Log the finish time of processing
-        logger.info(f"{self.keyname} - Processing finished at: {time.strftime('%Y-%m-%d %H:%M:%S')}")
+        
