@@ -1,0 +1,5 @@
+example: 
+  road_segments: ['amm_network']
+  pois: road_segments
+  codes: ['999']
+  cost: 'length'
