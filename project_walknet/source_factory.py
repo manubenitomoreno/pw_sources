@@ -1,12 +1,9 @@
-# source_factory.py
-
 import os
 import yaml
 from configparser import ConfigParser
 from importlib import import_module
 from typing import Optional
 from loguru import logger
-import time
 
 from db_models import DBManager
 
@@ -64,7 +61,6 @@ class Source:
         
         attributes = {**self.metadata, **kwargs, **self.additional_attributes, 'path': self.path}
         
-        logger.info(f"{self.keyname} - Processing started at: {time.strftime('%Y-%m-%d %H:%M:%S')}")
         
         if level in ['gather', 'level0', 'level1']:
             source_method = getattr(s, level)
@@ -72,15 +68,6 @@ class Source:
         elif level == 'persist':
             logger.info("Attempting to upload into DB...")
             self.persist()
-            
-        logger.info(f"{self.keyname} - Processing finished at: {time.strftime('%Y-%m-%d %H:%M:%S')}")
-
-        # Combine the attributes from sources.yaml and the method call's kwargs
-        
-#        attributes.pop('description', None)
-
-        # Log the start time of processing
-        
-        
+                
 
         
