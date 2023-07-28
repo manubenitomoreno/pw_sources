@@ -1,0 +1,44 @@
+{
+  "pois": {
+    "row_count": 10587,
+    "data_size_bytes": 17842176,
+    "data_size_kb": 17424.0,
+    "data_size_mb": 17.015625,
+    "timestamp": "2023-07-28 18:44:50"
+  },
+  "aois": {
+    "row_count": 0,
+    "data_size_bytes": 24576,
+    "data_size_kb": 24.0,
+    "data_size_mb": 0.0234375,
+    "timestamp": "2023-07-28 18:44:50"
+  },
+  "road_segments": {
+    "row_count": 0,
+    "data_size_bytes": 24576,
+    "data_size_kb": 24.0,
+    "data_size_mb": 0.0234375,
+    "timestamp": "2023-07-28 18:44:50"
+  },
+  "other_data": {
+    "row_count": 0,
+    "data_size_bytes": 16384,
+    "data_size_kb": 16.0,
+    "data_size_mb": 0.015625,
+    "timestamp": "2023-07-28 18:44:50"
+  },
+  "boundaries_geo": {
+    "row_count": 0,
+    "data_size_bytes": 24576,
+    "data_size_kb": 24.0,
+    "data_size_mb": 0.0234375,
+    "timestamp": "2023-07-28 18:44:50"
+  },
+  "boundaries_data": {
+    "row_count": 0,
+    "data_size_bytes": 24576,
+    "data_size_kb": 24.0,
+    "data_size_mb": 0.0234375,
+    "timestamp": "2023-07-28 18:44:50"
+  }
+}

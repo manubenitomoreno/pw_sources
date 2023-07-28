@@ -1,0 +1,112 @@
+{
+  "amm_network": {
+    "level0": {
+      "size_bytes": 10181600269,
+      "size_kb": 9942969.012695312,
+      "size_mb": 9709.930676460266,
+      "total_files": 81
+    },
+    "level1": {
+      "size_bytes": 4263936,
+      "size_kb": 4164.0,
+      "size_mb": 4.06640625,
+      "total_files": 2
+    },
+    "level2": {
+      "size_bytes": 29620827,
+      "size_kb": 28926.5888671875,
+      "size_mb": 28.248621940612793,
+      "total_files": 13
+    }
+  },
+  "catastro": {
+    "level0": {
+      "size_bytes": 16571966419,
+      "size_kb": 16183560.956054688,
+      "size_mb": 15804.258746147156,
+      "total_files": 203
+    },
+    "level1": {
+      "size_bytes": 198567091,
+      "size_kb": 193913.1748046875,
+      "size_mb": 189.36833477020264,
+      "total_files": 29
+    },
+    "level2": {
+      "size_bytes": 14075924,
+      "size_kb": 13746.01953125,
+      "size_mb": 13.423847198486328,
+      "total_files": 1
+    }
+  },
+  "edm2018": {
+    "level0": {
+      "size_bytes": 73766117,
+      "size_kb": 72037.2236328125,
+      "size_mb": 70.34885120391846,
+      "total_files": 5
+    },
+    "level1": {
+      "size_bytes": 320963987,
+      "size_kb": 313441.3935546875,
+      "size_mb": 306.0951108932495,
+      "total_files": 3
+    }
+  },
+  "ine_adrh": {
+    "level0": {
+      "size_bytes": 9910261684,
+      "size_kb": 9677989.92578125,
+      "size_mb": 9451.162036895752,
+      "total_files": 10
+    },
+    "level1": {
+      "size_bytes": 239905068,
+      "size_kb": 234282.29296875,
+      "size_mb": 228.79130172729492,
+      "total_files": 1
+    },
+    "level2": {
+      "size_bytes": 225209,
+      "size_kb": 219.9306640625,
+      "size_mb": 0.21477603912353516,
+      "total_files": 1
+    }
+  },
+  "ine_geo": {
+    "level0": {
+      "size_bytes": 119542279,
+      "size_kb": 116740.5068359375,
+      "size_mb": 114.00440120697021,
+      "total_files": 19
+    }
+  },
+  "ine_mobility": {
+    "level0": {
+      "size_bytes": 1247239609,
+      "size_kb": 1218007.4306640625,
+      "size_mb": 1189.4603815078735,
+      "total_files": 1224
+    },
+    "level1": {
+      "size_bytes": 2614636543,
+      "size_kb": 2553355.9990234375,
+      "size_mb": 2493.5117177963257,
+      "total_files": 2
+    }
+  },
+  "osm": {
+    "level0": {
+      "size_bytes": 397556,
+      "size_kb": 388.23828125,
+      "size_mb": 0.3791389465332031,
+      "total_files": 2
+    },
+    "level2": {
+      "size_bytes": 101148,
+      "size_kb": 98.77734375,
+      "size_mb": 0.09646224975585938,
+      "total_files": 1
+    }
+  }
+}
