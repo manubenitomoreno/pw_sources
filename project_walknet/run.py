@@ -1,7 +1,9 @@
 import os
 import sys
 import shutil
-
+import json
+from sqlalchemy import inspect, text
+from collections import defaultdict
 
 # Add the parent directory to the system path
 parent_dir = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
@@ -10,8 +12,13 @@ sys.path.append(parent_dir)
 import argparse
 from project_walknet.source_factory import Source
 from project_walknet.db_models import DBManager, Base
+from project_walknet.run_statistics import generate_table_statistics, generate_datalake_statistics, initialize_execution_statistics, generate_execution_statistics
 from loguru import logger
 from configparser import ConfigParser
+
+import time
+pipeline_logger = logger.bind(pipeline='')
+
 
 def list_available_sources():
     """
@@ -121,12 +128,39 @@ def main():
                 print(f"Source {args.reset_source} not found in the Datalake.")
         sys.exit(0)
         
-
     if args.keyname and args.action:
+        
+        execution_statistics_file = os.path.join(parent_dir, 'execution_statistics.json')
+        initialize_execution_statistics(execution_statistics_file)
+        
         source = Source(keyname=args.keyname)
+        
+        # Log the start time of the pipeline run
+        start_time = time.time()
+        pipeline_logger.bind(pipeline=args.action).info(f"{args.keyname} - Processing started at: {time.strftime('%Y-%m-%d %H:%M:%S')}")
+
         source.run(args.action)
+        
+        end_time = time.time()
+        execution_time = end_time - start_time
+        pipeline_logger.bind(pipeline=args.action).info(f"{args.keyname} - Processing finished at: {time.strftime('%Y-%m-%d %H:%M:%S')}, Time Spent: {execution_time:.2f} seconds")
+        
+        # Generate statistics for datalake and database
+        config = ConfigParser()
+        config.read(os.path.join(parent_dir, 'config.ini'))
+        datalake_path = config.get('DATALAKE', 'path')
+        generate_datalake_statistics(datalake_path)
+        db_manager = DBManager()
+        generate_table_statistics(db_manager)
+        db_manager.close()
+        generate_execution_statistics(args.keyname, args.action, execution_time, execution_statistics_file)
+        
+        pipeline_logger.info(f"Refreshing stats...")
+        
     elif not args.list_sources and not args.config_params and not args.reset_db and not args.reset_source:
         parser.error("Either --keyname and --action, or one of --list-sources, --config-params, --reset-db, --reset-source must be provided.")
 
 if __name__ == "__main__":
     main()
+
+
