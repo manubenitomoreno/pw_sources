@@ -262,15 +262,14 @@ def process_cadastral_data(path: str, codes: str) -> gpd.GeoDataFrame:
         cadastre_path, addresses_path, parcels_path = files_for_muni(code, path)
         df = open_cat_file(cadastre_path)
         df = column_strategy(df)
-        #logging.INFO(f'{municipality} .cat file processed')
+        logger.info(f'{municipality} .cat file processed')
         df = make_address_column(df)
-        #logging.INFO(f'{municipality} address column prepared')
+        logger.info(f'{municipality} address column prepared')
         gdf = merge_addresses_points(df, addresses_path)
-        #logging.INFO(f'{municipality} address spatial data merged')
+        logger.info(f'{municipality} address spatial data merged')
         gdf = detect_multiproperty(gdf)
         gdf = build_use_names(gdf)
-        #logging.INFO(f'{municipality} land use and typology procesed')
-        #gdf.drop(columns=['geometry']).to_parquet(path+r"\level1\{municipality}.parquet".format(municipality=municipality))
+        logger.info(f'{municipality} land use and typology procesed')
         gdf['x'] = gdf['geometry'].x
         gdf['y'] = gdf['geometry'].y
         gdf.to_parquet(path+r"\level1\{municipality}.parquet".format(municipality=municipality))
@@ -298,20 +297,19 @@ def apply_logic(df: pd.DataFrame, combination_tuple: tuple, end_type: str, categ
     return df   
       
 def group_data(gdf):
-    #logger.info(f'grouping area and count statistics by reference point...')
-
+    logger.info(f'grouping area and count statistics by reference point...')
     common = ['Parcel Cadastral ID', 'Property Cadastral ID','x','y','End Type','Walknet Category']
     local = ['Part Area in Cadastral Terms']
-    #logger.info(f'pivoting values...')
+    logger.info(f'pivoting values...')
     t = gdf.groupby(common).sum()[local]
     pv = pd.pivot_table(t.reset_index(),values='Part Area in Cadastral Terms', index = ['Parcel Cadastral ID', 'Property Cadastral ID','x','y'],columns = ['Walknet Category'])
-    #logger.info(f'area values...')
+    logger.info(f'area values...')
     pv = pv.groupby(['x','y']).sum().rename(columns={c:f"{c} - Area" for c in pv.columns})
     cv = t.groupby(common).count()[local]
-    #logger.info(f'count values...')
+    logger.info(f'count values...')
     cv = pd.pivot_table(cv.reset_index(),values='Part Area in Cadastral Terms', index = ['Parcel Cadastral ID', 'Property Cadastral ID','x','y'],columns = ['Walknet Category'])
     cv = cv.groupby(['x','y']).sum().rename(columns={c:f"{c} - Number" for c in cv.columns})
-    #logger.info(f'merging values into final table...')
+    logger.info(f'merging values into final table...')
     df = pd.concat([cv,pv],axis=1).reset_index()
     
     return df
@@ -319,11 +317,11 @@ def group_data(gdf):
 def json_data(data, columns, idx):
     d =  pd.Series(data.set_index(idx)[[c for c in columns if c in data.columns]].to_dict(orient='records'))
     d = d.astype(str).str.replace("'",'"')
-    #logging.info(f'Making JSON DATA columns...')
+    logger.info(f'Making JSON DATA columns...')
     return d
 
 def transform_data(gdf, provider: int):
-    #logging.info(f'Transforming data...')
+    logger.info(f'Transforming data...')
     CLASSES = ['Property Land Use Level1', 'Part Typology Level1', 'Part Typology Level2', 'Part Typology Level3', 'Part Land Use Level1', 'Part Land Use Level2']
     RELATIONS = pd.read_excel(r"C:\Users\ManuBenito\Documents\GitHub\walknet\sources\spain\landuse\catastro\metadata\relations.xls")
     for i,row in RELATIONS.iterrows():
@@ -333,31 +331,27 @@ def transform_data(gdf, provider: int):
         gdf = apply_logic(gdf,combination,end_type,category)
         
     gdf = group_data(gdf)
-    #logging.info(f'Building last columns...')
+    
     gdf['id'] = np.arange(0,len(gdf),1)
-    gdf['class'] = 'pois'
+    gdf['id_class'] = 'pois'
     gdf['category'] = 'land use - general'
     gdf['provider'] = provider
-    gdf['id'] = gdf['provider'].astype(str)+"-"+gdf['id'].astype(str)
+    gdf['id'] = gdf['provider'].astype(str)+"-"+gdf['id'].astype(int).astype(str).str.strip()
     gdf['data'] = json_data(gdf, DATACOLS, 'id' )
     gdf['geometry'] = gpd.GeoSeries(gpd.points_from_xy(gdf['x'], gdf['y'])).to_wkt()
-    return gdf[['id','class','category','provider','data','geometry']]
+    return gdf[['id','id_class','category','provider','data','geometry']]
 
 def transform_cadastral_data(path: str, codes: str, provider: int):
     path = f"{path}\level1"
     for code in codes:
+        logger.info(f'Reading CATASTRO data for {code}...')
         npath = [join(path, f) for f in listdir(path) if f.startswith(code)][0]
         df = pd.read_parquet(npath)
         df = transform_data(df, provider)
-        df.to_csv('{newpath}\level2_catastro_{code}.csv'.format(newpath= path.replace("level1","level2"), code = code),sep =";",index=False)
-"""
-============================================================================
-============================================================================
-MAIN FUNCTIONS FOR CATASTRO SOURCE - SPAIN
-============================================================================
-CONTRIBUITORS: MANU BENITO
-============================================================================
-"""
+        out_data = '{newpath}\level2_catastro_{code}.csv'.format(newpath= path.replace("level1","level2"), code = code)
+        logger.info(f'\nSaving LEVEL2 data for {code} in:\n {out_data}...')
+        df.to_csv(out_data,sep =";",index=False)
+
 
 def gather(source_instance, **kwargs):
     download_cadastral_data(codes = kwargs.get('codes'), outdir=kwargs.get('path'))

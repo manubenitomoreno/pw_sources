@@ -5,9 +5,9 @@ from OSMPythonTools.overpass import overpassQueryBuilder, Overpass
 
 import pandas as pd
 import geopandas as gpd
-
+from shapely import wkt
+from shapely.geometry import MultiPoint
 from loguru import logger
-
 
 #GATHERER
 
@@ -42,6 +42,7 @@ def get_features(area : str, keywords:dict):
 def download_osm_data(path: str, areas: list, categories: dict):
     data = {}
     for area_name in areas:
+        logger.info(f'Downloading OSM data for {area_name}...')
         area = nominatim.query(area_name, wkt=True)
         gdf = pd.concat(
             [gpd.GeoDataFrame(
@@ -59,25 +60,35 @@ def download_osm_data(path: str, areas: list, categories: dict):
     for k,v in data.items():
         outdir = f"{path}\level0"
         out_data = r"{outdir}\level0_osm_{d}.csv".format(outdir=outdir,d=k)
+        logger.info(f'Saving file in {out_data}...')
         v.to_csv(out_data,sep=";", index = False)
 
 def json_data(data, columns, idx):
     d =  pd.Series(data.set_index(idx)[[c for c in columns if c in data.columns]].to_dict(orient='records'))
     d = d.astype(str).str.replace("'",'"')
-    #logging.info(f'Making JSON DATA columns...')
+    logger.info(f'Making JSON DATA columns...')
     return d
 
 def transform_osm(path: str, areas: list, provider: int):
     DATACOLS = ['type','tags','color']
-    for area in areas:
-        df = pd.read_csv(r"{path}\level0\level0_osm_{d}.csv".format(path=path,d=area),sep=";")
+    for area_name in areas:
+        logger.info(f'Reading OSM data for {area_name}...')
+        df = pd.read_csv(r"{path}\level0\level0_osm_{d}.csv".format(path=path,d=area_name),sep=";")
+        logger.info(f'Making columns...')
+        df['geometry'] = df.geometry.apply(wkt.loads)
+        df = gpd.GeoDataFrame(df, geometry='geometry')
         df['provider'] = provider
         df['category'] = 'land use'+" - "+df['type']
-        df['class'] = 'pois'
+        df['id_class'] = 'pois'
         df['data'] = json_data(df, DATACOLS, 'id' )
-        df['id'] = df['provider'].astype(str)+"-"+df['id'].astype(int).astype(str)
-        df = df[['id', 'class', 'category', 'provider', 'data','geometry']]
-        df.to_csv(r"{path}\level2\level2_osm_{d}.csv".format(path=path,d=area),sep=";",index=False)
+        df['id'] = df['provider'].astype(str)+"-"+df['id'].astype(int).astype(str).str.strip()
+        df.drop_duplicates(subset='id',inplace=True)
+        df.loc[~df.geometry.geom_type.isin(['MultiPoint','Point']),'geometry'] = df['geometry'].centroid
+        df = df[['id', 'id_class', 'category', 'provider', 'data','geometry']]
+        out_data = r"{path}\level2\level2_osm_{d}.csv".format(path=path,d=area_name)
+        logger.info(f'\nSaving LEVEL2 data for {area_name} in:\n {out_data}...')
+        df.to_csv(out_data,sep=";",index=False)
+
 
 def gather(source_instance, **kwargs):
     download_osm_data(path=kwargs.get('path'), areas= kwargs.get('areas'),  categories= kwargs.get('categories'))
