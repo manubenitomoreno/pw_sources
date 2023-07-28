@@ -15,10 +15,10 @@ Base = declarative_base()
 class POIs(Base):
     __tablename__ = 'pois'
 
-    id = Column(String(50), primary_key=True)
+    id = Column(String(300), primary_key=True)
     id_class = Column(String(20))
-    category = Column(String(20))
-    provider = Column(String(20))
+    category = Column(String(50))
+    provider = Column(Integer())
     data = Column(JSON)
     geometry = Column(Geometry(geometry_type='POINT'))
     
@@ -40,7 +40,7 @@ class RoadSegments(Base):
     category = Column(String(50))
     provider = Column(String(50))
     data = Column(JSON)
-    geometry = Column(Geometry(geometry_type='LINESTRING'))
+    geometry = Column(Geometry(geometry_type='LINESTRINGZ'))
     
 class BoundariesGeo(Base):
     __tablename__ = 'boundaries_geo'
