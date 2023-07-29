@@ -23,34 +23,34 @@ The key components of the repository are as follows:
 
 The directory structure of this repository is:
 
-
-├── README.md
-├── .gitignore
-├── config.ini
-│
-├── database_statistics.json
-├── execution_statistics.json
-├── table_statistics.json
-│
-├── sources
-│ ├── ine_geo.py
-│ ├── ine_adrh.py
-│ ├── edm2018.py
-│ ├── edm2018_geo.py
-│ ├── osm.py
-│ ├── catastro.py
-│ ├── ine_movilidad.py
-│ ├── amm_network.py
-│ └── cartociudad.py
-│
-└── project_walknet
-├── app.py
-├── db_models.py
-├── run.py
-├── run_statistics.py
-├── source_factory.py
-└── sources.yaml
-
+\n
+├── README.md\n
+├── .gitignore\n
+├── config.ini\n
+│\n
+├── database_statistics.json\n
+├── execution_statistics.json\n
+├── table_statistics.json\n
+│\n
+├── sources\n
+│ ├── ine_geo.py\n
+│ ├── ine_adrh.py\n
+│ ├── edm2018.py\n
+│ ├── edm2018_geo.py\n
+│ ├── osm.py\n
+│ ├── catastro.py\n
+│ ├── ine_movilidad.py\n
+│ ├── amm_network.py\n
+│ └── cartociudad.py\n
+│\n
+└── project_walknet\n
+├── app.py\n
+├── db_models.py\n
+├── run.py\n
+├── run_statistics.py\n
+├── source_factory.py\n
+└── sources.yaml\n
+\n
 ## Installation
 Follow these steps to get the project up and running on your local machine for development and testing purposes:
 
@@ -70,29 +70,38 @@ pip install -r requirements.txt
  Set the path to your datalake in the config.ini file
  It should look like this
 
-├── {your datalake}
-│ ├── source_1
-│ │    ├── level0
-│ │    ├── level1
-│ │    ├── level2
-│ ├── source_2
-│ │    ├── level0
-│ │    ├── level1
-│ │    ├── level2
-│ ├── ...
-
+├── {your datalake}\n
+│ ├── source_1\n
+│ │    ├── level0\n
+│ │    ├── level1\n
+│ │    ├── level2\n
+│ ├── source_2\n
+│ │    ├── level0\n
+│ │    ├── level1\n
+│ │    ├── level2\n
+│ ├── ...\n
+\n
 4. **Setup a Postgres/PostGIS enabled database. Follow the instructions from PostGIS installation documentation.** 
 (https://postgis.net/documentation/getting_started/)
 Set the connection parameters in your config.ini
 
 ## Usage
-You can simply run:
 
-python run.py --arg1 --arg2 if you are running a pipeline segment
---arg1 should be one of the implemented source names
---arg2 should be one of the following: gather, level0, level1 and persist
-Other arguments include
---list-sources: list of the implemented sources
---config-params: shows actual configuration parameters
---reset-db: reboots the whole database
---reset-source: reboots the datalake for a particular source
+You can simply run:
+\n
+python run.py --arg1 --arg2 if you are running a pipeline segment\n
+--arg1 should be one of the implemented source names\n
+--arg2 should be one of the following: gather, level0, level1 and persist\n
+Other arguments include\n
+--list-sources: list of the implemented sources\n
+--config-params: shows actual configuration parameters\n
+--reset-db: reboots the whole database\n
+--reset-source: reboots the datalake for a particular source\n
+
+## DASHBOARD APP
+
+It can be run inside /project_walnet with:
+streamlit run app.py
+This will display it locally
+Also, the app has been published at
+(https://pwsources.streamlit.app/)
