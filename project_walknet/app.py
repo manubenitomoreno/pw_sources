@@ -1,12 +1,14 @@
-import streamlit as st
-import json
-import pandas as pd
 import os
 import pandas as pd
 import streamlit as st
 import json
 import plotly.express as px
-import os
+import yaml
+
+def load_yaml_file(file_path):
+    with open(file_path, 'r') as yaml_file:
+        data = yaml.safe_load(yaml_file)
+    return data
 
 def load_json_file(file_path):
 
@@ -30,11 +32,13 @@ parent_dir = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 datalake_stats_file = os.path.join(parent_dir, 'datalake_statistics.json')
 database_stats_file = os.path.join(parent_dir, 'table_statistics.json')
 execution_stats_file = os.path.join(parent_dir, 'execution_statistics.json')
+yaml_file = os.path.join(parent_dir, 'project_walknet','sources.yaml')
 
 # Load the JSON files
 datalake_stats = load_json_file(datalake_stats_file)
 database_stats = load_json_file(database_stats_file)
 execution_stats = load_json_file(execution_stats_file)
+yaml_data = load_yaml_file(yaml_file)
 
 
 def plot_datalake_statistics():
@@ -115,7 +119,10 @@ def plot_execution_statistics():
 
 def main():
     st.title("Data Statistics Visualization")
-
+    yaml_keys = list(yaml_data.keys())
+    selected_key = st.selectbox('Select a key', yaml_keys)
+    st.header("Execution Source Configurations")
+    st.write(yaml_data[selected_key])
     # Check if the JSON data was loaded successfully
     if datalake_stats is None or database_stats is None or execution_stats is None:
         st.error("One or more JSON files not found. Make sure the files exist and provide the correct paths.")

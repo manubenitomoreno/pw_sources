@@ -13,10 +13,10 @@
       "total_files": 2
     },
     "level2": {
-      "size_bytes": 29620827,
-      "size_kb": 28926.5888671875,
-      "size_mb": 28.248621940612793,
-      "total_files": 13
+      "size_bytes": 2342410,
+      "size_kb": 2287.509765625,
+      "size_mb": 2.233896255493164,
+      "total_files": 1
     }
   },
   "catastro": {
@@ -55,21 +55,21 @@
   },
   "ine_adrh": {
     "level0": {
-      "size_bytes": 9910261684,
-      "size_kb": 9677989.92578125,
-      "size_mb": 9451.162036895752,
-      "total_files": 10
+      "size_bytes": 496280927,
+      "size_kb": 484649.3427734375,
+      "size_mb": 473.29037380218506,
+      "total_files": 2
     },
     "level1": {
-      "size_bytes": 239905068,
-      "size_kb": 234282.29296875,
-      "size_mb": 228.79130172729492,
-      "total_files": 1
+      "size_bytes": 260713182,
+      "size_kb": 254602.716796875,
+      "size_mb": 248.63546562194824,
+      "total_files": 2
     },
     "level2": {
-      "size_bytes": 225209,
-      "size_kb": 219.9306640625,
-      "size_mb": 0.21477603912353516,
+      "size_bytes": 41662,
+      "size_kb": 40.685546875,
+      "size_mb": 0.03973197937011719,
       "total_files": 1
     }
   },
@@ -79,6 +79,18 @@
       "size_kb": 116740.5068359375,
       "size_mb": 114.00440120697021,
       "total_files": 19
+    },
+    "level1": {
+      "size_bytes": 311029760,
+      "size_kb": 303740.0,
+      "size_mb": 296.62109375,
+      "total_files": 1
+    },
+    "level2": {
+      "size_bytes": 621923746,
+      "size_kb": 607347.408203125,
+      "size_mb": 593.1127033233643,
+      "total_files": 1
     }
   },
   "ine_mobility": {

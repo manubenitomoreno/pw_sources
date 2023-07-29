@@ -1,44 +1,44 @@
 {
-  "pois": {
-    "row_count": 10587,
-    "data_size_bytes": 17842176,
-    "data_size_kb": 17424.0,
-    "data_size_mb": 17.015625,
-    "timestamp": "2023-07-28 18:44:50"
-  },
   "aois": {
     "row_count": 0,
     "data_size_bytes": 24576,
     "data_size_kb": 24.0,
     "data_size_mb": 0.0234375,
-    "timestamp": "2023-07-28 18:44:50"
+    "timestamp": "2023-07-29 11:50:21"
+  },
+  "pois": {
+    "row_count": 10587,
+    "data_size_bytes": 17702912,
+    "data_size_kb": 17288.0,
+    "data_size_mb": 16.8828125,
+    "timestamp": "2023-07-29 11:50:21"
   },
   "road_segments": {
-    "row_count": 0,
-    "data_size_bytes": 24576,
-    "data_size_kb": 24.0,
-    "data_size_mb": 0.0234375,
-    "timestamp": "2023-07-28 18:44:50"
+    "row_count": 3365,
+    "data_size_bytes": 4857856,
+    "data_size_kb": 4744.0,
+    "data_size_mb": 4.6328125,
+    "timestamp": "2023-07-29 11:50:21"
   },
   "other_data": {
     "row_count": 0,
     "data_size_bytes": 16384,
     "data_size_kb": 16.0,
     "data_size_mb": 0.015625,
-    "timestamp": "2023-07-28 18:44:50"
+    "timestamp": "2023-07-29 11:50:21"
   },
   "boundaries_geo": {
-    "row_count": 0,
-    "data_size_bytes": 24576,
-    "data_size_kb": 24.0,
-    "data_size_mb": 0.0234375,
-    "timestamp": "2023-07-28 18:44:50"
+    "row_count": 52974,
+    "data_size_bytes": 290701312,
+    "data_size_kb": 283888.0,
+    "data_size_mb": 277.234375,
+    "timestamp": "2023-07-29 11:50:21"
   },
   "boundaries_data": {
-    "row_count": 0,
-    "data_size_bytes": 24576,
-    "data_size_kb": 24.0,
-    "data_size_mb": 0.0234375,
-    "timestamp": "2023-07-28 18:44:50"
+    "row_count": 126,
+    "data_size_bytes": 147456,
+    "data_size_kb": 144.0,
+    "data_size_mb": 0.140625,
+    "timestamp": "2023-07-29 11:50:21"
   }
 }
