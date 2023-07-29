@@ -105,3 +105,21 @@ streamlit run app.py
 This will display it locally
 Also, the app has been published at
 (https://pwsources.streamlit.app/)
+
+## To-Do List
+
+- [ ] Implement `ine_movilidad` pipeline
+- [ ] Implement `cartociudad` pipeline
+- [ ] Implement `edm_geo.py` pipeline
+- [ ] Implement `edm2028.py` pipeline
+- [ ] Make a decision on CRS handling
+- [ ] Make a function to re-populate the DB automatically
+- [ ] Make a logger pipeline to query it and inspect performance in detail
+- [ ] Implement a method to retrieve data on demand in `db_models.py`
+- [ ] Implement the `make_network.py` module with the DB interface
+- [ ] Implement the `set_network.py` module
+- [ ] Implement the `network_factory.py` module
+- [ ] Implement the `extractions_factory.py` module
+- [ ] Implement the `edm_extraction.py` module
+
+
