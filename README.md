@@ -1,175 +1,98 @@
-<!-- Improved compatibility of back to top link: See: https://github.com/othneildrew/Best-README-Template/pull/73 -->
-<a name="readme-top"></a>
-<!--
-*** Thanks for checking out the Best-README-Template. If you have a suggestion
-*** that would make this better, please fork the repo and create a pull request
-*** or simply open an issue with the tag "enhancement".
-*** Don't forget to give the project a star!
-*** Thanks again! Now go create something AMAZING! :D
--->
+# Project Walknet (Sources)
+
+## Description
+Project Walknet (Sources) is a data orchestration program designed for the general Project Walknet, which is part of a PhD Research Project at the Universidad Politécnica de Madrid. This program contains several modules to run data pipelines, save and display performance statistics, an Object-Relational Mapping (ORM) for database interaction, and a directory `/sources` containing the pipelines themselves.
+
+The key components of the repository are as follows:
+
+- `config.ini`: This file includes essential configurations for the project such as repository path, database connection information, and datalake paths.
+
+- JSON files: These files (`database_statistics.json`, `execution_statistics.json`, `table_statistics.json`) contain various statistics and feed the Streamlit dashboard. They get updated after each pipeline execution.
+
+- `sources` directory: This contains the pipelines for different data sources. The pipelines included are: `ine_geo`, `ine_adrh`, `edm2018`, `edm2018_geo`, `osm`, `catastro`, `ine_movilidad`, `amm_network`, and `cartociudad`.
+
+- `project_walknet` directory: This contains the main modules of the program:
+    - `app.py`: A Streamlit application to visualize the state of the datalake, database, and pipeline performance, as well as configuration parameters for each pipeline.
+    - `db_models.py`: Provides an ORM to interact with the PostgreSQL database.
+    - `run.py`: Orchestrates the execution of pipelines. For each data source, it gathers, transforms, and persists the data.
+    - `run_statistics.py`: Generates various statistics after each execution of the pipeline, which then get saved into the JSON files for the dashboard.
+    - `source_factory.py`: Implements the `Source` class that orchestrates pipelines.
+    - `sources.yaml`: A configuration file for the pipelines.
+
+## Project Structure
+
+The directory structure of this repository is:
 
 
+├── README.md
+├── .gitignore
+├── config.ini
+│
+├── database_statistics.json
+├── execution_statistics.json
+├── table_statistics.json
+│
+├── sources
+│ ├── ine_geo.py
+│ ├── ine_adrh.py
+│ ├── edm2018.py
+│ ├── edm2018_geo.py
+│ ├── osm.py
+│ ├── catastro.py
+│ ├── ine_movilidad.py
+│ ├── amm_network.py
+│ └── cartociudad.py
+│
+└── project_walknet
+├── app.py
+├── db_models.py
+├── run.py
+├── run_statistics.py
+├── source_factory.py
+└── sources.yaml
 
-<!-- PROJECT SHIELDS -->
-<!--
-*** I'm using markdown "reference style" links for readability.
-*** Reference links are enclosed in brackets [ ] instead of parentheses ( ).
-*** See the bottom of this document for the declaration of the reference variables
-*** for contributors-url, forks-url, etc. This is an optional, concise syntax you may use.
-*** https://www.markdownguide.org/basic-syntax/#reference-style-links
--->
-[![Contributors][contributors-shield]][contributors-url]
-[![Forks][forks-shield]][forks-url]
-[![Stargazers][stars-shield]][stars-url]
-[![Issues][issues-shield]][issues-url]
-[![MIT License][license-shield]][license-url]
-[![LinkedIn][linkedin-shield]][linkedin-url]
+## Installation
+Follow these steps to get the project up and running on your local machine for development and testing purposes:
 
+1. **Create and activate a virtual environment:**
 
+python -m venv env
+Requirements lay in the requirements.txt file
+source env/bin/activate  # On Windows use `.\env\Scripts\activate`
 
-<!-- PROJECT LOGO -->
-<br />
-<div align="center">
-  <a href="https://github.com/manubenitomoreno/pw_sources">
-    <img src="walknet-logo.png" alt="Logo" width="80" height="80">
-  </a>
+2. **Clone the repository and install the requirements:**
 
-  <h3 align="center">Project-Walknet</h3>
+git clone https://github.com/yourusername/projectname.git
+cd projectname
+pip install -r requirements.txt
 
-  <p align="center">
-    An awesome README template to jumpstart your projects!
-    <br />
-    <a href="https://github.com/othneildrew/Best-README-Template"><strong>Explore the docs »</strong></a>
-    <br />
-    <br />
-    <a href="https://github.com/othneildrew/Best-README-Template">View Demo</a>
-    ·
-    <a href="https://github.com/othneildrew/Best-README-Template/issues">Report Bug</a>
-    ·
-    <a href="https://github.com/othneildrew/Best-README-Template/issues">Request Feature</a>
-  </p>
-</div>
+3. **Build a local directory structure for your datalake to store the intermediate data:**
+ Set the path to your datalake in the config.ini file
+ It should look like this
 
+├── {your datalake}
+│ ├── source_1
+│ │    ├── level0
+│ │    ├── level1
+│ │    ├── level2
+│ ├── source_2
+│ │    ├── level0
+│ │    ├── level1
+│ │    ├── level2
+│ ├── ...
 
+4. **Setup a Postgres/PostGIS enabled database. Follow the instructions from PostGIS installation documentation.** 
+(https://postgis.net/documentation/getting_started/)
+Set the connection parameters in your config.ini
 
-<!-- TABLE OF CONTENTS -->
-<details>
-  <summary>Table of Contents</summary>
-  <ol>
-    <li>
-      <a href="#about-the-project">About The Project</a>
-      <ul>
-        <li><a href="#built-with">Built With</a></li>
-      </ul>
-    </li>
-    <li>
-      <a href="#getting-started">Getting Started</a>
-      <ul>
-        <li><a href="#prerequisites">Prerequisites</a></li>
-        <li><a href="#installation">Installation</a></li>
-      </ul>
-    </li>
-    <li><a href="#usage">Usage</a></li>
-    <li><a href="#roadmap">Roadmap</a></li>
-    <li><a href="#contributing">Contributing</a></li>
-    <li><a href="#license">License</a></li>
-    <li><a href="#contact">Contact</a></li>
-    <li><a href="#acknowledgments">Acknowledgments</a></li>
-  </ol>
-</details>
+## Usage
+You can simply run:
 
-
-
-<!-- ABOUT THE PROJECT -->
-## About The Project
-
-[![Product Name Screen Shot][product-screenshot]](https://example.com)
-
-This program is part of my wider research project: Project Walknet. The project's objective is to analyze trends in pedestrian proximity mobility in the Greater Metro Area of Madrid. It could briefly be described as a series of data pipelines that feed a database with information regarding land use and mobility, a system to put it together in the shape of a graph, in which a number of metrics are calculated and uploaded to the database, to finally be aggregated into extractions that will be subject to statistical analyses.
-
-So far, I have:
-* Built a series of modules that gather and process all of my target data sources
-* Built some modules that process and build the networks in Python
-* Made a first experiment that was published here []()
-* Built a pipeline to analyze my data through a RF model
-
-The idea is to give a better and more mainainable shape to this project, with the lessons learned throughout the course
-
-In the following roadmap, I have drafted the proposed specs for it, following the general structure of the repository and the program
-
-### SOURCES
-- [ ] sources.py. This module
-- [x] Add back to top links
-- [ ] Add Additional Templates w/ Examples
-### PROJECT WALKNET
-- [ ] Add "components" document to easily copy & paste sections of the readme
-- [ ] Multi-language Support
-    - [ ] Chinese
-    - [ ] Spanish
-
-
-<p align="right">(<a href="#readme-top">back to top</a>)</p>
-
-
-
-### Specs
-
-<p align="right">(<a href="#readme-top">back to top</a>)</p>
-
-
-
-<!-- ROADMAP -->
-## Roadmap
-
-- [x] Add Changelog
-- [x] Add back to top links
-- [ ] Add Additional Templates w/ Examples
-- [ ] Add "components" document to easily copy & paste sections of the readme
-- [ ] Multi-language Support
-    - [ ] Chinese
-    - [ ] Spanish
-
-See the [open issues](https://github.com/othneildrew/Best-README-Template/issues) for a full list of proposed features (and known issues).
-
-<p align="right">(<a href="#readme-top">back to top</a>)</p>
-
-
-<!-- LICENSE -->
-## License
-
-Distributed under the MIT License. See `LICENSE.txt` for more information.
-
-<p align="right">(<a href="#readme-top">back to top</a>)</p>
-
-
-<!-- MARKDOWN LINKS & IMAGES -->
-<!-- https://www.markdownguide.org/basic-syntax/#reference-style-links -->
-[contributors-shield]: https://img.shields.io/github/contributors/othneildrew/Best-README-Template.svg?style=for-the-badge
-[contributors-url]: https://github.com/othneildrew/Best-README-Template/graphs/contributors
-[forks-shield]: https://img.shields.io/github/forks/othneildrew/Best-README-Template.svg?style=for-the-badge
-[forks-url]: https://github.com/othneildrew/Best-README-Template/network/members
-[stars-shield]: https://img.shields.io/github/stars/othneildrew/Best-README-Template.svg?style=for-the-badge
-[stars-url]: https://github.com/othneildrew/Best-README-Template/stargazers
-[issues-shield]: https://img.shields.io/github/issues/othneildrew/Best-README-Template.svg?style=for-the-badge
-[issues-url]: https://github.com/othneildrew/Best-README-Template/issues
-[license-shield]: https://img.shields.io/github/license/othneildrew/Best-README-Template.svg?style=for-the-badge
-[license-url]: https://github.com/othneildrew/Best-README-Template/blob/master/LICENSE.txt
-[linkedin-shield]: https://img.shields.io/badge/-LinkedIn-black.svg?style=for-the-badge&logo=linkedin&colorB=555
-[linkedin-url]: https://linkedin.com/in/othneildrew
-[product-screenshot]: images/screenshot.png
-[Next.js]: https://img.shields.io/badge/next.js-000000?style=for-the-badge&logo=nextdotjs&logoColor=white
-[Next-url]: https://nextjs.org/
-[React.js]: https://img.shields.io/badge/React-20232A?style=for-the-badge&logo=react&logoColor=61DAFB
-[React-url]: https://reactjs.org/
-[Vue.js]: https://img.shields.io/badge/Vue.js-35495E?style=for-the-badge&logo=vuedotjs&logoColor=4FC08D
-[Vue-url]: https://vuejs.org/
-[Angular.io]: https://img.shields.io/badge/Angular-DD0031?style=for-the-badge&logo=angular&logoColor=white
-[Angular-url]: https://angular.io/
-[Svelte.dev]: https://img.shields.io/badge/Svelte-4A4A55?style=for-the-badge&logo=svelte&logoColor=FF3E00
-[Svelte-url]: https://svelte.dev/
-[Laravel.com]: https://img.shields.io/badge/Laravel-FF2D20?style=for-the-badge&logo=laravel&logoColor=white
-[Laravel-url]: https://laravel.com
-[Bootstrap.com]: https://img.shields.io/badge/Bootstrap-563D7C?style=for-the-badge&logo=bootstrap&logoColor=white
-[Bootstrap-url]: https://getbootstrap.com
-[JQuery.com]: https://img.shields.io/badge/jQuery-0769AD?style=for-the-badge&logo=jquery&logoColor=white
-[JQuery-url]: https://jquery.com 
+python run.py --arg1 --arg2 if you are running a pipeline segment
+--arg1 should be one of the implemented source names
+--arg2 should be one of the following: gather, level0, level1 and persist
+Other arguments include
+--list-sources: list of the implemented sources
+--config-params: shows actual configuration parameters
+--reset-db: reboots the whole database
+--reset-source: reboots the datalake for a particular source
