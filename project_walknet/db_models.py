@@ -61,7 +61,6 @@ class BoundariesData(Base):
     category = Column(String(50))
     provider = Column(String(50))
     data = Column(JSON)
-    geometry = Column(Geometry(geometry_type='POLYGON'))
     
 class OtherData(Base):
     __tablename__ = 'other_data'
