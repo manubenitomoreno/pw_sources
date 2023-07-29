@@ -35,9 +35,10 @@ ine_adrh:
 
 ine_geo:
   provider: 4
-  table: boundary_geo
+  table: boundaries_geo
   description:
   years: ['2018']
+  boundary_type: ['census_tract']
 
 edm2018:
   provider: 5
