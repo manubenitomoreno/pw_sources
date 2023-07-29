@@ -27,3 +27,13 @@ variables = ['Renta neta media por persona ', 'Renta neta media por hogar',
 'Porcentaje de población española',
 'Índice de Gini',
 'Distribución de la renta P80/P20']
+
+variables_map = {'Renta neta media por persona ':'rent_pers_net', 'Renta neta media por hogar':'rent_hog_net',
+'Renta bruta media por persona':'rent_pers_gross', 'Renta bruta media por hogar':'rent_hog_gross',
+'Edad media de la población':'mean_age',
+'Porcentaje de población menor de 18 años':'p_age_18',
+'Porcentaje de población de 65 y más años':'p_age_65',
+'Tamaño medio del hogar':'mean_household_size',
+'Porcentaje de hogares unipersonales':'p_households_1',
+'Población':'population',
+'Porcentaje de población española':'p_national'}

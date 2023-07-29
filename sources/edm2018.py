@@ -4,28 +4,8 @@ import pandas as pd
 import re 
 from loguru import logger
 
-
 from sources.metadata.edm2018_metadata import *  
-"""
-============================================================================
-============================================================================
-GATHERER FOR EDM2018 SOURCE - SPAIN
-============================================================================
-CONTRIBUITORS: MANU BENITO
-============================================================================
-"""
 
-"""
-============================================================================
-============================================================================
-LEVEL0 FOR EDM2018 SOURCE - SPAIN
-============================================================================
-CONTRIBUITORS: MANU BENITO
-============================================================================
-Reads all Excel files (both data and codes sheets)
-Consolidates data and mapping codes
-Merges data together
-"""    
 def read_data(path: str, files: dict, schemas: dict):
     return {n:pd.read_excel(
         r"{path}\level0\trips\{p}.xlsx".format(path=path,p=p), sheet_name = n.upper(),dtype=schemas[n]
@@ -84,14 +64,6 @@ def process_edm_data(path: str):
     
     final.to_parquet(r"""{path}\level1\level1_edm2018.parquet""".format(path=path))
 
-"""
-============================================================================
-============================================================================
-MAIN FUNCTIONS FOR EDM2018 SOURCE - SPAIN
-============================================================================
-CONTRIBUITORS: MANU BENITO
-============================================================================
-"""
 
 def gather(source_instance, **kwargs):
     logger.info("EDM does not have a gather mode implemented. Jus check the website and download the excel and shapefile files")
