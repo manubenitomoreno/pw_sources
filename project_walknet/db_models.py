@@ -45,18 +45,18 @@ class RoadSegments(Base):
 class BoundariesGeo(Base):
     __tablename__ = 'boundaries_geo'
 
-    id = Column(Integer, Sequence('user_id_seq'), primary_key=True)
+    id = Column(String(300), primary_key=True)
     id_class = Column(String(50))
     category = Column(String(50))
     provider = Column(String(50))
     data = Column(JSON)
-    geometry = Column(Geometry(geometry_type='POLYGON'))
+    geometry = Column(Geometry(geometry_type='MULTIPOLYGON'))
 
 class BoundariesData(Base):
     __tablename__ = 'boundaries_data'
 
-    id = Column(Integer, Sequence('user_id_seq'), primary_key=True)
-    geo_id = Column(Integer, ForeignKey('boundaries_geo.id')) # this is the foreign key
+    id = Column(String(300), primary_key=True)
+    geo_id = Column(String(300), ForeignKey('boundaries_geo.id')) # this is the foreign key
     id_class = Column(String(50))
     category = Column(String(50))
     provider = Column(String(50))
