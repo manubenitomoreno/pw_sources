@@ -42,14 +42,25 @@ The directory structure of this repository is:
 │ ├── ine_movilidad.py
 │ ├── amm_network.py
 │ └── cartociudad.py
-│
+├── networks
+│ ├── make_netkork.py
+│ ├── set_network.py
+│ └── metrics.py
+├── extractions
+│ └── amm_network.sql
 └── project_walknet
-├── app.py
-├── db_models.py
-├── run.py
-├── run_statistics.py
-├── source_factory.py
-└── sources.yaml
+    ├── app.py
+    ├── db_models.py
+    ├── run.py
+    ├── run_statistics.py
+    ├── source_factory.py
+    ├── network_factory.py
+    ├── extraction_factory.py
+    ├── model_factory.py
+    ├── extractions.yaml
+    ├── networks.yaml
+    ├── models.yaml
+    └── sources.yaml
 ```
 ## Installation
 Follow these steps to get the project up and running on your local machine for development and testing purposes:
