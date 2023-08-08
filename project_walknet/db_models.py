@@ -163,5 +163,27 @@ class DBManager:
             return OtherData
         else:
             raise ValueError(f"Unrecognized table name: {table_name}")
+        
+    def retrieve_data(self, table_name, filters=None):
+        """
+        Retrieve data from a specified table.
+        
+        Parameters:
+        - table_name (str): Name of the table from which to retrieve data.
+        - filters (dict, optional): Conditions to apply to the query.
+        
+        Returns:
+        - List[Base]: List of model instances retrieved from the table.
+        """
+        table_class = self.get_table_class(table_name)
+
+        query = self.session.query(table_class)
+        
+        if filters:
+            for column, value in filters.items():
+                query = query.filter(getattr(table_class, column) == value)
+        
+        return query.all()
+
 
         
