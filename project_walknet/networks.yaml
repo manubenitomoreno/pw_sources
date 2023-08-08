@@ -1,5 +1,9 @@
-example: 
-  road_segments: ['amm_network']
-  pois: road_segments
-  codes: ['999']
-  cost: 'length'
+alcala_network: 
+  road_segments_table: road_segments
+  road_segments_query: road_segments
+  pois_table: pois
+  aois_table: aois
+  pois_query: 'something'
+  aois_query: 'something'
+  extent_table: boundaries_geo
+  extent_filter: 'code in ()'
