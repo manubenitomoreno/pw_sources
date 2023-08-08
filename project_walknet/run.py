@@ -162,5 +162,50 @@ def main():
 
 if __name__ == "__main__":
     main()
+    
+    
+""" DRAFT FOR -N AND -S FUNCTIONALITIES!!
+def main():
+    
+    parser = argparse.ArgumentParser(description="Run data gathering, processing for a specific source, or handle network operations.")
+    
+    # Define mutually exclusive groups
+    group = parser.add_mutually_exclusive_group(required=True)
+    
+    group.add_argument("-s", "--source", action="store_true", help="Indicate that the operation is for a source.")
+    group.add_argument("-n", "--network", action="store_true", help="Indicate that the operation is for a network.")
+    
+    parser.add_argument("keyname", nargs="?", help="The keyname of the source or network.")
+    parser.add_argument("action", nargs="?", help="The action to perform (gather/level0/... for sources, build/metrics/... for networks).")
+    
+    parser.add_argument("--list-sources", action="store_true", help="List available sources and exit.")
+    parser.add_argument("--config-params", action="store_true", help="Display parameters from config.ini and exit.", dest="config_params")
+    parser.add_argument("--reset-db", action="store_true", help="Reset the database and exit.", dest="reset_db")
+    parser.add_argument("--reset-source", nargs="?", const="all", default=None, help="Reset a source (delete all its files) or all sources. Provide source keyname or 'all'.", dest="reset_source")
+    
+    args = parser.parse_args()
+
+    # Existing functionalities for --list-sources, --config-params, --reset-db, and --reset-source remain unchanged.
+
+    # Logic for -s
+    if args.source:
+        if args.keyname and args.action:
+            # Existing logic for processing sources
+            # ...
+
+    # Logic for -n
+    elif args.network:
+        if args.keyname and args.action:
+            # Logic for processing networks based on the given keyname and action
+            # E.g., if action is 'build', then build the network for the given keyname
+            # If action is 'metrics', then compute metrics for the given network keyname
+            pass
+
+    # ...
+
+if __name__ == "__main__":
+    main()
+
+"""
 
 
