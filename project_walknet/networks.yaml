@@ -1,9 +1,13 @@
 alcala_network: 
+  description:
+  crs: 
+  chunk_size: 100
   road_segments_table: road_segments
-  road_segments_query: road_segments
+  road_segments_query: ST_INTERSECTS(road_segments,boundaries_geo)
   pois_table: pois
-  aois_table: aois
-  pois_query: 'something'
-  aois_query: 'something'
+  aois_table: 
+  pois_query: category in ('land use - general')
+  aois_query: 
   extent_table: boundaries_geo
-  extent_filter: 'code in ()'
+  extent_filter: data.municipality_code = '28005'
+  partition: municipality_code

@@ -34,11 +34,11 @@ class Source:
             
     def persist(self, **kwargs):
         # Use self.db to perform DB operations
-        if self.db.table_exists(self.metadata['table']):
+        if self.db.table_exists(self.metadata['table'], target_schema = 'sources'):
             
             # Get the SQLAlchemy class for the given table
-            table_class = self.db.get_table_class(self.metadata['table'])
-
+            table_class = self.db.get_table_class(f"{self.metadata['table']}")
+            
             # Path to the level 2 data
             level2_data_path = os.path.join(self.path, 'level2')
             
@@ -51,6 +51,8 @@ class Source:
 
                     # Add data from the csv file to the database
                     self.db.add_data_from_csv(table_class, csv_file_path)
+        else:
+            logger.warning(f"Table {self.metadata['table']} not found")
 
                     
     def run(self, level: str, **kwargs) -> None:
