@@ -63,14 +63,30 @@ def download_osm_data(path: str, areas: list, categories: dict):
         logger.info(f'Saving file in {out_data}...')
         v.to_csv(out_data,sep=";", index = False)
 
-def json_data(data, columns, idx):
-    d =  pd.Series(data.set_index(idx)[[c for c in columns if c in data.columns]].to_dict(orient='records'))
-    d = d.astype(str).str.replace("'",'"')
-    logger.info(f'Making JSON DATA columns...')
-    return d
+
+def json_data(data: pd.DataFrame, columns: list, idx: str) -> pd.Series:
+    """
+    Create JSON data from a DataFrame.
+
+    Parameters:
+        data (pd.DataFrame): The DataFrame to be converted.
+        columns (List[str]): The columns to include in the JSON.
+        idx (str): The column to use as the JSON index.
+
+    Returns:
+        A pandas Series with the JSON data.
+    """
+    try:
+        d = data.set_index(idx)[[c for c in columns if c in data.columns]].to_dict(orient='records')
+        logger.info('Making JSON DATA columns...')
+        return pd.Series(d)
+    except Exception as e:
+        logger.error(f"Failed to create JSON data. Error: {e}")
+        return pd.Series()
+
 
 def transform_osm(path: str, areas: list, provider: int):
-    DATACOLS = ['type','tags','color']
+    DATACOLS = ['type'] #,'tags','color'] TAGS NESTING IS NOT WORKING AS JSON. BEWARE
     for area_name in areas:
         logger.info(f'Reading OSM data for {area_name}...')
         df = pd.read_csv(r"{path}\level0\level0_osm_{d}.csv".format(path=path,d=area_name),sep=";")

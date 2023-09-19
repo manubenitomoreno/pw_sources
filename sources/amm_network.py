@@ -11,7 +11,7 @@ def transform_amm(path: str, codes: List[str]):
         gdf['provider'] = 'Various'
         gdf = gdf.explode(ignore_index=True)
         gdf['length'] = gdf.apply(lambda x: round(x['geometry'].length,2), axis = 1)
-        gdf['data'] = "{length: " +gdf['length'].astype(str)+"}"
+        gdf['data'] = "{'length': '" +gdf['length'].astype(str)+"'}"
         gdf = gdf[['id','id_class','category','provider','data','geometry']]
 
         gdf.to_csv(path+f"\level2\level2_amm_network_{code}.csv",sep=';',index=False)

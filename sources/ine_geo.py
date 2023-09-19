@@ -6,6 +6,7 @@ from shapely.geometry.base import BaseGeometry
 import pandas as pd
 from loguru import logger
 from typing import List, Dict, Any
+import json
 
 def download_ine_geo_data(years: List[int], path: str) -> None:
     """
@@ -62,18 +63,18 @@ def process_ine_geo_layer(year: int, gdf: gpd.GeoDataFrame, path: str) -> None:
         fields = ['province_code','municipality_code','district_code','census_tract_code','province_name','municipality_name','district_name','census_tract_name','boundary_code','boundary_name','boundary_source','boundary_period', 'boundary_type','geometry']
         logger.info(f'Make INE  nested official codes')
         gdf['boundary_code'] = gdf['CUSEC']
-        gdf['boundary_name'] = f"Sección "+gdf['CDIS']+gdf['CSEC']
-        gdf['boundary_source'] = 'Instituto Nacional de Estadística'
+        gdf['boundary_name'] = ""#f"Sección "+gdf['CDIS']+gdf['CSEC']
+        gdf['boundary_source'] = ""#'Instituto Nacional de Estadística'
         gdf['boundary_period'] = year
         gdf['boundary_type'] = 'census_tract'
         gdf['census_tract_code'] = gdf['CUSEC']
-        gdf['census_tract_name'] = f"Sección "+gdf['CDIS']+gdf['CSEC']
+        gdf['census_tract_name'] = ""#f"Sección "+gdf['CDIS']+gdf['CSEC']
         gdf['district_code'] = gdf['CUDIS']
-        gdf['district_name'] = f"Distrito "+gdf['CDIS']
+        gdf['district_name'] = ""#f"Distrito "+gdf['CDIS']
         gdf['municipality_code'] = gdf['CUMUN']
-        gdf['municipality_name'] = gdf['NMUN']
+        gdf['municipality_name'] = ""#gdf['NMUN']
         gdf['province_code'] = gdf['CPRO']
-        gdf['province_name'] = gdf['NPRO']
+        gdf['province_name'] = ""#gdf['NPRO']
         
         gdf = gdf[fields]
         logger.info(f'Reproject the layer')
@@ -83,7 +84,7 @@ def process_ine_geo_layer(year: int, gdf: gpd.GeoDataFrame, path: str) -> None:
         district = gdf.dissolve(by=['province_code','municipality_code','district_code','province_name','municipality_name','district_name']).reset_index()
         district['boundary_code'] = district['district_code']
         district['boundary_name'] = district['district_name']
-        district['boundary_source'] = 'Instituto Nacional de Estadística'
+        district['boundary_source'] = ""#'Instituto Nacional de Estadística'
         district['boundary_period'] = year
         district['boundary_type'] = 'district'
         district['census_tract_code'] = ''
@@ -93,7 +94,7 @@ def process_ine_geo_layer(year: int, gdf: gpd.GeoDataFrame, path: str) -> None:
         municipality = district.dissolve(by=['province_code','municipality_code','province_name','municipality_name']).reset_index()
         municipality['boundary_code'] = district['municipality_code']
         municipality['boundary_name'] = district['municipality_name']
-        municipality['boundary_source'] = 'Instituto Nacional de Estadística'
+        municipality['boundary_source'] = ""#'Instituto Nacional de Estadística'
         municipality['boundary_period'] = year
         municipality['boundary_type'] = 'municipality'
         municipality['district_code'] = ''
@@ -103,7 +104,7 @@ def process_ine_geo_layer(year: int, gdf: gpd.GeoDataFrame, path: str) -> None:
         province = municipality.dissolve(by=['province_code','province_name']).reset_index()
         province['boundary_code'] = province['province_code']
         province['boundary_name'] = province['province_name']
-        province['boundary_source'] = 'Instituto Nacional de Estadística'
+        province['boundary_source'] = ""#'Instituto Nacional de Estadística'
         province['boundary_period'] = year
         province['boundary_type'] = 'province'
         province['municipality_code'] = ''
@@ -132,7 +133,8 @@ def process_ine_geo_data(years: List[int], path: str) -> None:
             process_ine_geo_layer(year, gdf, path)
     except Exception as e:
         logger.error(f"Failed to process geo data. Error: {e}")
-        
+       
+
 def json_data(data: pd.DataFrame, columns: List[str], idx: str) -> pd.Series:
     """
     Create JSON data from a DataFrame.
@@ -146,13 +148,13 @@ def json_data(data: pd.DataFrame, columns: List[str], idx: str) -> pd.Series:
         A pandas Series with the JSON data.
     """
     try:
-        d = pd.Series(data.set_index(idx)[[c for c in columns if c in data.columns]].to_dict(orient='records'))
-        d = d.astype(str).str.replace("'",'"')
+        d = data.set_index(idx)[[c for c in columns if c in data.columns]].to_dict(orient='records')
         logger.info('Making JSON DATA columns...')
-        return d
+        return pd.Series(d)
     except Exception as e:
         logger.error(f"Failed to create JSON data. Error: {e}")
         return pd.Series()
+
  
 def force_multypolygon(geometry: BaseGeometry) -> BaseGeometry:
     """
