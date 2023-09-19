@@ -13,9 +13,9 @@
       "total_files": 2
     },
     "level2": {
-      "size_bytes": 2342410,
-      "size_kb": 2287.509765625,
-      "size_mb": 2.233896255493164,
+      "size_bytes": 2355870,
+      "size_kb": 2300.654296875,
+      "size_mb": 2.246732711791992,
       "total_files": 1
     }
   },
@@ -87,9 +87,9 @@
       "total_files": 1
     },
     "level2": {
-      "size_bytes": 621923746,
-      "size_kb": 607347.408203125,
-      "size_mb": 593.1127033233643,
+      "size_bytes": 618045382,
+      "size_kb": 603559.943359375,
+      "size_mb": 589.4140071868896,
       "total_files": 1
     }
   },
@@ -115,9 +115,9 @@
       "total_files": 2
     },
     "level2": {
-      "size_bytes": 101148,
-      "size_kb": 98.77734375,
-      "size_mb": 0.09646224975585938,
+      "size_bytes": 43985,
+      "size_kb": 42.9541015625,
+      "size_mb": 0.041947364807128906,
       "total_files": 1
     }
   }
