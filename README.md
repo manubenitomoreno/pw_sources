@@ -100,9 +100,13 @@ Set the connection parameters in your config.ini
 
 You can simply run:
 ```
-python run.py --arg1 --arg2 if you are running a pipeline segment
---arg1 should be one of the implemented source names
---arg2 should be one of the following: gather, level0, level1 and persist
+python run.py 
+    -s if you are running a pipeline segment
+        --arg1 should be one of the implemented source names ()
+        --arg2 should be one of the following: gather, level0, level1 and persist
+    -n if you are running a network process
+        --arg1 should be one of the implemented network names ()
+        --arg2 should be one of the following: construct, 
 Other arguments include
 --list-sources: list of the implemented sources
 --config-params: shows actual configuration parameters
@@ -119,17 +123,25 @@ Also, the app has been published at
 
 ## To-Do List
 
+- [x] Implement schema parametrization in declarative bases (ORM)
+- [ ] Implement prefix parametrization in declarative bases (ORM) for network tables
+- [ ] Implement a method to retrieve data on demand in `db_models.py`
+
+- [ ] Implement the `make_network.py` module with the DB interface
+- [ ] Implement the `set_network.py` module
+- [ ] Implement the `network_factory.py` module
+
 - [ ] Implement `ine_movilidad` pipeline
 - [ ] Implement `cartociudad` pipeline
 - [ ] Implement `edm_geo.py` pipeline
 - [ ] Implement `edm2028.py` pipeline
+
 - [ ] Make a decision on CRS handling
-- [ ] Make a function to re-populate the DB automatically
+- [ ] Make a function to re-populate the whole sources schema automatically
+
 - [ ] Make a logger pipeline to query it and inspect performance in detail
-- [ ] Implement a method to retrieve data on demand in `db_models.py`
-- [ ] Implement the `make_network.py` module with the DB interface
-- [ ] Implement the `set_network.py` module
-- [ ] Implement the `network_factory.py` module
+
+
 - [ ] Implement the `extractions_factory.py` module
 - [ ] Implement the `edm_extraction.py` module
 
