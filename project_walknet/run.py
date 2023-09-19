@@ -80,10 +80,10 @@ def main():
     parser.add_argument("--list-sources", action="store_true", help="List available sources and exit.")
     parser.add_argument("--config-params", action="store_true", help="Display parameters from config.ini and exit.", 
                         dest="config_params")
-    parser.add_argument("--reset-all-sources", action="store_true", help="Reset the database and exit.", 
-                        dest="reset_all_sources")
+    parser.add_argument("--reset-database", action="store_true", help="Reset the database and exit.", 
+                        dest="reset_database")
     parser.add_argument("--reset-source", nargs="?", const="all", default=None, 
-                        help="Reset a source (delete all its files) or all sources. Provide source keyname or 'all'.", 
+                        help="Reset a source (delete all its files). Use along with source keyname", 
                         dest="reset_source")
     
     args = parser.parse_args()
@@ -96,18 +96,18 @@ def main():
         display_config_params()
         sys.exit(0)
         
-    if args.reset_all_sources:
+    if args.reset_database:
         response = input("Are you sure you want to reset the sources database? This will delete all data in sources. Y/N: ")
         if response.lower() == "y":
             db = DBManager()
-            db.drop_all_tables('sources')  # This will drop all tables in the public schema
-            db.create_all('sources')  # Create all tables based on your SQLAlchemy models
+            db.drop_all_tables('sources')  # This will drop all tables in the sources schema
+            db.create_all(['pois','aois','road_segments','boundaries_geo','boundaries_data','other_data'],'sources') 
             print("Database reset successfully.")
         else:
             print("Database reset cancelled.")
         sys.exit(0)
 
-    #TODO I don't think this is ever working but it is not critical
+    #TODO I don't think this is ever working but it is not critical. WELL IT HAPPENS TO BE, DO IT FOR NETWORKS ALSO
     if args.reset_source:
         datalake_path = Source.cfg.get('DATALAKE', 'path')
         if args.reset_source.lower() == 'all':
@@ -201,7 +201,7 @@ def main():
             
         else: print("Please provide both keyname and action for network workflow")
         
-    #elif args.execution:
+    #elif args.extraction:
         #if args.keyname and args.action:
         
     elif not args.list_sources and not args.config_params and not args.reset_db and not args.reset_source:
