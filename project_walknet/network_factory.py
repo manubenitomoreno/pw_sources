@@ -196,6 +196,8 @@ class Network:
         nodes.to_csv(r"C:\Users\ManuBenito\Documents\Walknet-DataLake\networks\alcala_network\nodes.csv",sep=";",index=False)
         
         logger.info("Network processed and saved in datalake")
+        
+        #MAKE ANOTHER PARAMETER SUCH AS PERSIST OR NOT?
             
         
         """
