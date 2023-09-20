@@ -186,6 +186,37 @@ def remove_z_point(data_z):
         data_z.at[i,'geometry'] = Point(row['geometry'].coords[0][:2])
     return data_z
 
+def make_network_ids(edges):
+    """
+    
+    """
+    nodes = {}
+    edges_nodes = {}
+    edges.insert(0, 'edge_id', range(0,len(edges)))
+    node_id = 0
+
+    for i, row in edges.iterrows():
+        lin = loads(row['geometry'])
+        l = list(lin.coords)
+        ends = [l[0],l[-1]]
+        edges_nodes.update({row['edge_id'] : ends})
+
+        for end in ends:
+            if end in nodes.keys():
+                pass
+            else:
+                node_id += 1
+                nodes.update({end:node_id})
+                
+    edges['node0'] = edges['edge_id'].map({k:v[0] for k,v in edges_nodes.items()})
+    edges['node1'] = edges['edge_id'].map({k:v[1] for k,v in edges_nodes.items()})
+    
+    edges['node0_id'] = edges['node0'].map(nodes)
+    edges['node1_id'] = edges['node1'].map(nodes)
+    nodes = pd.DataFrame(nodes.items(), columns=['geometry', 'node_id'])
+    return edges, nodes
+        
+
 def make_network(network, pois, chunk_size=100):
     """
     Creates a network by splitting the original network and associating points of interest (POIs).
@@ -226,15 +257,19 @@ def make_network(network, pois, chunk_size=100):
     final_split_network = split_lines_at_points(modified_network, final_network_points_list, ['id'])
     final_split_network = calculate_speed_by_slope(final_split_network, 'length', 'slope')
     
-    final_network_points = pd.DataFrame(final_network_points_list).rename(columns={0: 'geometry'})
-    final_network_points['netpoint'] = final_network_points.index
-    final_network_points['geometry'] = final_network_points.apply(lambda row: Point(loads(row['geometry'])), axis=1)
-    final_network_points = gpd.GeoDataFrame(final_network_points, geometry='geometry')
+    edges, nodes = make_network_ids(final_split_network)
+    #final_network_points = pd.DataFrame(final_network_points_list).rename(columns={0: 'geometry'})
+    #final_network_points['netpoint'] = final_network_points.index
+    edges.drop_duplicates(subset=['node0_id','node1_id'],inplace=True)
+    edges['edge_id'] = edges['id']
     
     
-    nearest = find_nearest(nearest[['id', 'originalg', 'geometry']], final_network_points, 'id', 'netpoint')
+    nodes['geometry'] = nodes.apply(lambda row: Point(row['geometry']), axis=1)
+    #final_network_points = gpd.GeoDataFrame(final_network_points, geometry='geometry')
     
-    final_network_points.rename(columns={'geometry': 'netpointg', 'netpoint_x': 'netpoint'}, inplace=True)
-    final_network_points = final_network_points[['netpoint', 'netpointg']]
+    nearest = find_nearest(nearest[['id', 'originalg', 'geometry']], nodes, 'id', 'node_id')
     
-    return final_split_network, nearest, final_network_points
+    #final_network_points.rename(columns={'geometry': 'netpointg', 'netpoint_x': 'netpoint'}, inplace=True)
+    #final_network_points = final_network_points[['netpoint', 'netpointg']]
+    
+    return edges, nearest, nodes
