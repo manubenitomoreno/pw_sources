@@ -81,38 +81,39 @@ class OtherData(Base):
     data = Column(JSONB)
 
 def create_nodes_table(prefix=""):
-    if f"{prefix}Nodes" in globals():
-        return globals()[f"{prefix}Nodes"]
+    #if f"{prefix}Nodes" in globals():
+        #return globals()[f"{prefix}Nodes"]
     class Nodes(Base):
         __tablename__ = f'{prefix}_nodes' if prefix else 'nodes'
         __table_args__ = {'schema': 'networks'}
         node_id = Column(Integer, primary_key=True)
-        partition = Column(String(50))
+        geometry = Column(Geometry(geometry_type='POINT'))
 
     return Nodes
 
 def create_edges_table(prefix=""):
-    if f"{prefix}Nodes" in globals():
-        return globals()[f"{prefix}Nodes"]
+    #if f"{prefix}Nodes" in globals():
+        #return globals()[f"{prefix}Nodes"]
     class Edges(Base):
         __tablename__ = f'{prefix}_edges' if prefix else 'edges'
         __table_args__ = {'schema': 'networks'}
         edge_id = Column(Integer, primary_key=True)
-        partition = Column(String(50))
+        data = Column(JSONB)
         start = Column(Integer)
         end = Column(Integer)
+        geometry = Geometry(geometry_type='LINESTRING')
 
     return Edges
 
 def create_relations_table(prefix=""):
-    if f"{prefix}Nodes" in globals():
-        return globals()[f"{prefix}Nodes"]
+    #if f"{prefix}Nodes" in globals():
+        #return globals()[f"{prefix}Nodes"]
     class Relations(Base):
         __tablename__ = f'{prefix}_relations' if prefix else 'relations'
         __table_args__ = {'schema': 'networks'}
-        relation_id = Column(Integer, primary_key=True)
-        node_id = Column(Integer)
-        pois_id = Column(String(300))
+        relation_id = Column(String(300), primary_key=True)
+        relation_kind = Column(String(300))
+        data = Column(JSONB)
 
     return Relations
 
@@ -158,9 +159,10 @@ class DBManager:
     def add_data_from_csv(self, table_class, csv_file_path):
         import json
         data = pd.read_csv(csv_file_path, sep = ";",encoding='latin-1')
-        data['data'] = data['data'].astype(str).str.replace("'",'"')
-        #print(data.iloc[0]['data'])
-        data['data'] = data['data'].apply(json.loads)
+        if 'data' in data.columns:
+            data['data'] = data['data'].astype(str).str.replace("'",'"')
+            print(data['data'].values[0])
+            data['data'] = data['data'].apply(json.loads)
 
         data_dict = data.to_dict(orient='records')
 
@@ -261,6 +263,23 @@ class DBManager:
                 query = query.filter(getattr(table_class, column) == value)
         
         return query.all()
+
+    def delete_network_data(self, network_name):
+        """Delete all data for a specific network in the database."""
+        # The table names associated with this network
+        table_names = [f"{network_name}_nodes", f"{network_name}_edges", f"{network_name}_relations"]
+
+        for table_name in table_names:
+            if self.table_exists(table_name, target_schema="networks"):
+                try:
+                    # Drop each table associated with this network
+                    table_class = self.get_table_class(table_name)
+                    table_class.__table__.drop(self.engine)
+                    print(f"Table {table_name} dropped successfully.")
+                except SQLAlchemyError as e:
+                    print(f"Failed to drop table {table_name}. Error: {str(e)}")
+            else:
+                print(f"Table {table_name} not found.")
 
 
         
