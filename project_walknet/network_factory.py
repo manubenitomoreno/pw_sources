@@ -168,9 +168,58 @@ class Network:
         final_split_network, nearest, final_network_points = make_network(self.data['road_segments'], self.data['pois'], chunk_size)
         return final_split_network, nearest, final_network_points
 
-    def persist(self, table, data):
-        pass
-        # Implement functionality to upload data
+    def save_data_to_csv(self):
+        # Create the path if it doesn't exist
+        if not os.path.exists(self.path):
+            os.makedirs(self.path)
+            
+        # Save dataframes to CSV
+        edges_path = os.path.join(self.path, 'edges.csv')
+        self.edges.to_csv(edges_path, sep=";", index=False)
+        logger.info(f"Saved edges data to {edges_path}")
+        
+        nodes_path = os.path.join(self.path, 'nodes.csv')
+        self.nodes.to_csv(nodes_path, sep=";", index=False)
+        logger.info(f"Saved nodes data to {nodes_path}")
+        
+        relations_path = os.path.join(self.path, 'relations.csv')
+        self.relations.to_csv(relations_path, sep=";", index=False)
+        logger.info(f"Saved relations data to {relations_path}")
+        
+    def persist_to_db(self, **kwargs):
+        # Check if the tables exist
+        nodes_table = f"{self.keyname}_nodes"
+        edges_table = f"{self.keyname}_edges"
+        relations_table = f"{self.keyname}_relations"
+        
+        nodes_exist = self.db.table_exists(nodes_table, 'networks')
+        edges_exist = self.db.table_exists(edges_table, 'networks')
+        relations_exist = self.db.table_exists(relations_table, 'networks')
+        
+        # If not, create them
+        if not all([nodes_exist, edges_exist, relations_exist]):
+            logger.info("Creating tables in the database...")
+            self.db.create_all(["nodes", "edges", "relations"], 'networks', self.keyname)
+        
+        # Now, let's upload the data from the CSVs
+        nodes_path = os.path.join(self.path, 'nodes.csv')
+        edges_path = os.path.join(self.path, 'edges.csv')
+        relations_path = os.path.join(self.path, 'relations.csv')
+        
+        nodes_class = self.db.get_table_class("nodes", self.keyname)
+        edges_class = self.db.get_table_class("edges", self.keyname)
+        relations_class = self.db.get_table_class("relations", self.keyname)
+        
+        logger.info(f"Uploading data from {nodes_path} to the database...")
+        self.db.add_data_from_csv(nodes_class, nodes_path)
+        
+        logger.info(f"Uploading data from {edges_path} to the database...")
+        self.db.add_data_from_csv(edges_class, edges_path)
+        
+        logger.info(f"Uploading data from {relations_path} to the database...")
+        self.db.add_data_from_csv(relations_class, relations_path)
+        
+        logger.info("Data uploaded to the database successfully.")
         
     def construct(self, **attributes):
         sources_exist, networks_exist = self.check_tables()
@@ -187,42 +236,13 @@ class Network:
 
         logger.info("Processing network from pois and road segments")
         
-        edges, nearest, nodes = self.process_network()
-        
-        #TODO MAKE THIS PARAMETRIC!
-        
-        edges.to_csv(r"C:\Users\ManuBenito\Documents\Walknet-DataLake\networks\alcala_network\edges.csv",sep=";",index=False)
-        nearest.to_csv(r"C:\Users\ManuBenito\Documents\Walknet-DataLake\networks\alcala_network\nearest.csv",sep=";",index=False)
-        nodes.to_csv(r"C:\Users\ManuBenito\Documents\Walknet-DataLake\networks\alcala_network\nodes.csv",sep=";",index=False)
-        
+        self.edges, self.relations, self.nodes = self.process_network()
+
+        self.save_data_to_csv()
         logger.info("Network processed and saved in datalake")
         
-        #MAKE ANOTHER PARAMETER SUCH AS PERSIST OR NOT?
-            
-        
-        """
-        if self.check_tables():
-            make_queries()
-            load_queries()
-            #process it 
-            #upload it
-            pass
-            #table creation with prefixes
-            
-        else: 
-            make the schema tables
-            query the data and load it to the network object
-            process it 
-            upload it
-        
-        # Define the sequence in which the methods will be called to construct the network.
-        # Example:
-        # self.call_data()
-        # self.make_network()
-        # self.upload(table="some_table", data=self.nodes)
-        """
     def run(self, action: str, **kwargs) -> None:
-        assert action in ['construct','persist','metrics'], "Specify a correct action for the network"
+        assert action in ['construct','persist','metrics','reset-database','reset-files'], "Specify a correct action for the network"
         
         logger.info(f"Calling network: {self.keyname}, Action: {action}")
         attributes = {**self.metadata, **kwargs, 'path': self.path}
@@ -234,4 +254,4 @@ class Network:
             self.metrics(**attributes)
         elif action == 'persist':
             logger.info("Attempting to persist the network...")
-            self.persist(**attributes)
+            self.persist_to_db(**attributes)

@@ -1,7 +1,7 @@
 import os
 import sys
 import shutil
-import json
+#import json
 from sqlalchemy import inspect, text
 from collections import defaultdict
 
@@ -199,6 +199,26 @@ def main():
             
             pipeline_logger.info(f"Refreshing stats...")
             
+            if args.action == "reset-files":
+                datalake_path = Network.cfg.get('DATALAKE', 'path')  # Assuming Source.cfg also works for Networks
+                network_dir = os.path.join(datalake_path, args.keyname)
+
+                if os.path.isdir(network_dir):
+                    response = input(f"Are you sure you want to delete all files for network {args.keyname} in the Datalake? This will delete the network's data. Y/N: ")
+                    if response.lower() == 'y':
+                        shutil.rmtree(network_dir)
+                        os.mkdir(network_dir)
+                        print(f"Network {args.keyname} reset successfully.")
+                    else:
+                        print(f"Reset of network {args.keyname} cancelled.")
+                else:
+                    print(f"Network {args.keyname} not found in the Datalake.")
+            
+            elif args.action == "reset-database":
+                db = DBManager()
+                db.delete_network_data(args.keyname)  
+                print(f"Network {args.keyname} data in the database reset successfully.")
+       
         else: print("Please provide both keyname and action for network workflow")
         
     #elif args.extraction:
