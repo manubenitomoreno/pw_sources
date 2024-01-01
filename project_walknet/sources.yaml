@@ -63,4 +63,6 @@ edm2018:
     This is a declared trip data survey for 2018.
     Download needs to be manual. It is a set of excel files that are parsed into our database format
 
-
+edm_geo:
+  provider: 6
+  table: boundaries_geo

@@ -92,7 +92,8 @@ def transform_osm(path: str, areas: list, provider: int):
         df = pd.read_csv(r"{path}\level0\level0_osm_{d}.csv".format(path=path,d=area_name),sep=";")
         logger.info(f'Making columns...')
         df['geometry'] = df.geometry.apply(wkt.loads)
-        df = gpd.GeoDataFrame(df, geometry='geometry')
+        df = gpd.GeoDataFrame(df, geometry='geometry',crs=4326)
+        df = df.to_crs(25830)
         df['provider'] = provider
         df['category'] = 'land use'+" - "+df['type']
         df['id_class'] = 'pois'

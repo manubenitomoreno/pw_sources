@@ -29,12 +29,13 @@ def make_network(network: gpd.GeoDataFrame, pois: gpd.GeoDataFrame, chunk_size=1
     - nearest: DataFrame indicating the nearest network points for each POI.
     - final_network_points: DataFrame of the final network points.
     """
+    network['original_id'] = network['id']
     logger.info(f"Interpolating intermediate vertices")
     # Create measure points by splitting original network into specified chunks and retrieving all the resulting line intersections
     split_interpolated_network, modified_network = lines_and_interpolated_vertices(
         network,
         chunk_size,
-        ['id'])
+        ['original_id','id'])
     logger.info(f"Setting possible measure points (points near a POI)")
     measure_points = gpd.GeoDataFrame(
         get_lines_endpoints(split_interpolated_network),
@@ -73,7 +74,7 @@ def make_network(network: gpd.GeoDataFrame, pois: gpd.GeoDataFrame, chunk_size=1
     final_split_network = split_lines_at_points(
         modified_network,
         final_network_points_list,
-        ['id'])
+        ['id','original_id'])
     
     logger.info(f"Calculating slope and speed")
     #We then calculate speed, yet we could calculate other attributes here
@@ -102,11 +103,16 @@ def make_network(network: gpd.GeoDataFrame, pois: gpd.GeoDataFrame, chunk_size=1
     
     logger.info(f"Producing edges")
     #Final treatment of our edges
-    edges['data'] = edges.apply(lambda row : json_data(row, ['slope','length','speed_up','speed_down','time_up','time_down'], 'edge_id'),axis=1)
     edges.rename(columns={'node0_id':'start','node1_id':'end'},inplace=True)
+    
+    edges = culdesacs(edges)
+    
+    edges['data'] = edges.apply(lambda row : json_data(row, ['original_id','slope','length','speed_up','speed_down','time_up','time_down','culdesacs','culdesac_length'], 'edge_id'),axis=1)
+    
     edges['geometry'] = edges['geometry'].apply(loads)
     edges['geometry'] = edges['geometry'].apply(lambda x: remove_z_line(x))
     edges = gpd.GeoDataFrame(edges,geometry='geometry')
+    
     edges = edges[['edge_id','data','start','end','geometry']]
     
     logger.info(f"Producing relations")

@@ -11,3 +11,4 @@ alcala_network:
   extent_table: boundaries_geo
   extent_filter: data->>'municipality_code' = '28005'
   partition: municipality_code
+  metrics: [shortest_paths,ego_graphs]

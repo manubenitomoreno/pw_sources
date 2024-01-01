@@ -12,7 +12,6 @@ from geoalchemy2 import Geometry
 
 import pandas as pd
 
-
 Base = declarative_base()
 
 class POIs(Base):
@@ -101,7 +100,7 @@ def create_edges_table(prefix=""):
         data = Column(JSONB)
         start = Column(Integer)
         end = Column(Integer)
-        geometry = Geometry(geometry_type='LINESTRING')
+        geometry = Column(Geometry(geometry_type='LINESTRING'))
 
     return Edges
 
@@ -116,6 +115,16 @@ def create_relations_table(prefix=""):
         data = Column(JSONB)
 
     return Relations
+
+def create_paths_table(prefix=""):
+    class Paths(Base):
+        __tablename__ = f'{prefix}_paths' if prefix else 'paths'
+        __table_args__ = {'schema': 'networks'}
+        relation_id = Column(String(300), primary_key=True)
+        relation_kind = Column(String(300))
+        data = Column(JSONB)
+
+    return Paths
 
 class DBManager:
     def __init__(self):
@@ -147,21 +156,25 @@ class DBManager:
             Nodes = create_nodes_table(prefix)
             Edges = create_edges_table(prefix)
             Relations = create_relations_table(prefix)
-
+            Paths = create_paths_table(prefix)
+            
             # Add them to Base metadata
             tables_to_create = [
                 Nodes.metadata.tables.get(f"{Nodes.__table_args__['schema']}.{Nodes.__tablename__}"),
                 Edges.metadata.tables.get(f"{Edges.__table_args__['schema']}.{Edges.__tablename__}"),
-                Relations.metadata.tables.get(f"{Relations.__table_args__['schema']}.{Relations.__tablename__}")
+                Relations.metadata.tables.get(f"{Relations.__table_args__['schema']}.{Relations.__tablename__}"),
+                Paths.metadata.tables.get(f"{Paths.__table_args__['schema']}.{Paths.__tablename__}"),
             ]
             Base.metadata.create_all(self.engine, tables=tables_to_create)
 
     def add_data_from_csv(self, table_class, csv_file_path):
         import json
         data = pd.read_csv(csv_file_path, sep = ";",encoding='latin-1')
+        
         if 'data' in data.columns:
+            
+            
             data['data'] = data['data'].astype(str).str.replace("'",'"')
-            print(data['data'].values[0])
             data['data'] = data['data'].apply(json.loads)
 
         data_dict = data.to_dict(orient='records')
@@ -200,7 +213,7 @@ class DBManager:
         return table_name in inspector.get_table_names(schema=target_schema)
     
     def drop_all_tables(self, target_schema):
-        from sqlalchemy import text
+        #from sqlalchemy import text
         print(f"Attempting to drop all tables in schema: {target_schema}")
         DROP_ALL_TABLES_QUERY = f"""
         DO $$ DECLARE
@@ -231,13 +244,15 @@ class DBManager:
             }
 
         # If it's one of the dynamic tables, then generate it using the prefix
-        if table_name in ["nodes", "edges", "relations"]:
+        if table_name in ["nodes", "edges", "relations", "paths"]:
             if table_name == "nodes":
                 return create_nodes_table(prefix)
             elif table_name == "edges":
                 return create_edges_table(prefix)
             elif table_name == "relations":
                 return create_relations_table(prefix)
+            elif table_name == "paths":
+                return create_paths_table(prefix)
         
         # Otherwise, use the static mapping
         return static_table_mapping.get(table_name) or ValueError(f"Unrecognized table name: {table_name}")
@@ -267,7 +282,7 @@ class DBManager:
     def delete_network_data(self, network_name):
         """Delete all data for a specific network in the database."""
         # The table names associated with this network
-        table_names = [f"{network_name}_nodes", f"{network_name}_edges", f"{network_name}_relations"]
+        table_names = [f"{network_name}_nodes", f"{network_name}_edges", f"{network_name}_relations", f"{network_name}_paths"]
 
         for table_name in table_names:
             if self.table_exists(table_name, target_schema="networks"):

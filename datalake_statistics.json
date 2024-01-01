@@ -33,9 +33,9 @@
       "total_files": 29
     },
     "level2": {
-      "size_bytes": 14075924,
-      "size_kb": 13746.01953125,
-      "size_mb": 13.423847198486328,
+      "size_bytes": 26620148,
+      "size_kb": 25996.23828125,
+      "size_mb": 25.386951446533203,
       "total_files": 1
     }
   },
@@ -51,6 +51,26 @@
       "size_kb": 313441.3935546875,
       "size_mb": 306.0951108932495,
       "total_files": 3
+    }
+  },
+  "edm_geo": {
+    "level0": {
+      "size_bytes": 23142026,
+      "size_kb": 22599.634765625,
+      "size_mb": 22.069955825805664,
+      "total_files": 1
+    },
+    "level1": {
+      "size_bytes": 0,
+      "size_kb": 0.0,
+      "size_mb": 0.0,
+      "total_files": 0
+    },
+    "level2": {
+      "size_bytes": 19586263,
+      "size_kb": 19127.2099609375,
+      "size_mb": 18.678915977478027,
+      "total_files": 1
     }
   },
   "ine_adrh": {
@@ -87,9 +107,9 @@
       "total_files": 1
     },
     "level2": {
-      "size_bytes": 618045382,
-      "size_kb": 603559.943359375,
-      "size_mb": 589.4140071868896,
+      "size_bytes": 558294680,
+      "size_kb": 545209.6484375,
+      "size_mb": 532.4312973022461,
       "total_files": 1
     }
   },
@@ -115,9 +135,9 @@
       "total_files": 2
     },
     "level2": {
-      "size_bytes": 43985,
-      "size_kb": 42.9541015625,
-      "size_mb": 0.041947364807128906,
+      "size_bytes": 44763,
+      "size_kb": 43.7138671875,
+      "size_mb": 0.04268932342529297,
       "total_files": 1
     }
   }

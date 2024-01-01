@@ -7,12 +7,9 @@ from db_models import DBManager
 from sqlalchemy import text
 import pandas as pd
 from networks.make_network import make_network
+from networks.shortest_paths import make_shortest_paths
 from shapely import wkt
 import geopandas as gpd
-
-#TODO DISABLE THIS
-import warnings
-warnings.filterwarnings("ignore")
 
 class Network:
     cfg = ConfigParser()
@@ -29,27 +26,7 @@ class Network:
         self.nodes = gpd.GeoDataFrame()
         self.edges = gpd.GeoDataFrame()
         self.relations = gpd.GeoDataFrame()
-        
-        """
-        YOU ARE HERE
-        la idea es construct (and persist)
-        despues load (red cargada)
-        y despues metrics definidas en el yaml
-        make partition attribute (in this case, codes)
-            check if tables and queries exist
-            make schema if it does not exist
-            do retrieve data from the db
-            transform data retrieved
-            make final db tables
-            persist those tables
-            retrieve data from db and build Network
-            get only relevant template generator
-            calculate shortest paths and cfbc and ego_graph
-            persist those paths
-        #self.final_split_network = None
-        #self.nearest = None
-        #self.final_network_points = None
-        """
+        self.paths = gpd.GeoDataFrame()
 
     #@classmethod
     def load_metadata(self):
@@ -64,7 +41,6 @@ class Network:
         except FileNotFoundError:
             logger.warning("networks.yaml file not found.")
             
-   
     def check_tables(self):
         """
         Check whether source tables and network tables exist.
@@ -86,7 +62,8 @@ class Network:
         table_names = [
         "nodes",
         "edges",
-        "relations"]
+        "relations",
+        "paths"]
         self.db.create_all(table_names, 'networks', self.keyname)#, schema = 'networks') 
     
     def call_data(self):
@@ -110,13 +87,15 @@ class Network:
         road_segments_query = f"SELECT {road_segments_fields} FROM sources.{road_segments_table} s WHERE {road_segments_where}"
         pois_query = f"SELECT * FROM {pois_table} s WHERE {pois_where} AND {extent_filter}"
         
-        spatial_join = """ST_INTERSECTS(ST_Transform(st_setsrid(st_geomfromewkt(st_asewkt(s.geometry)),25830), 4326),st_setsrid(st_geomfromewkt(st_asewkt(e.geometry)),4326))"""
+        spatial_join = """ST_INTERSECTS(ST_Transform(st_setsrid(st_geomfromewkt(st_asewkt(s.geometry)),25830), 25830),st_setsrid(st_geomfromewkt(st_asewkt(e.geometry)),25830))"""
         
         if road_segments_query:
             logger.info("Querying for road segments data")
             if extent_table:
                 road_segments_query = f"SELECT {road_segments_fields} FROM sources.{road_segments_table} s, sources.{extent_table} e WHERE {road_segments_where} AND {spatial_join} AND e.{extent_filter}"
+                
                 self.data['road_segments'] = pd.DataFrame.from_dict(self.db.get_query_results(text(road_segments_query)))
+                #print(road_segments_query)
                 self.data['road_segments']['geometry'] = self.data['road_segments']['geometry'].apply(wkt.loads)
                 self.data['road_segments'] = gpd.GeoDataFrame(
                     self.data['road_segments'],
@@ -154,6 +133,11 @@ class Network:
                     geometry='geometry',
                     crs = "EPSG:25830")
             logger.info("POIs data ready")
+            
+    def call_network_tables(self, tables):
+        
+        return {table: pd.DataFrame.from_dict(
+            self.db.get_query_results(text(f"SELECT * FROM networks.{self.keyname}_{table}"))) for table in tables}
             
     def process_network(self, chunk_size=100):
         """
@@ -240,6 +224,30 @@ class Network:
 
         self.save_data_to_csv()
         logger.info("Network processed and saved in datalake")
+        
+    def metrics(self, **attributes):
+        
+        if 'shortest_paths' in self.metadata['metrics']:
+            tables = self.call_network_tables(['edges'])
+            tables['edges'] = tables['edges'].drop(columns='geometry')
+            logger.info("Computing shortest paths")
+            paths = make_shortest_paths(tables['edges'])
+            #print(paths)
+            
+            paths_path = os.path.join(self.path, 'paths.csv')
+            paths.to_csv(paths_path, sep=";", index=False)
+            logger.info(f"Saved paths data to {paths_path}")
+            
+        #paths_table = f"{self.keyname}_paths"
+        #paths_exist = self.db.table_exists(paths_table, 'networks')
+            
+        #if not paths_exist:
+            #logger.info("Creating tables in the database...")
+            #self.db.create_paths_table(self.keyname)
+        
+        paths_class = self.db.get_table_class("paths", self.keyname)
+        logger.info(f"Uploading data from {paths_path} to the database...")
+        self.db.add_data_from_csv(paths_class, paths_path)
         
     def run(self, action: str, **kwargs) -> None:
         assert action in ['construct','persist','metrics','reset-database','reset-files'], "Specify a correct action for the network"

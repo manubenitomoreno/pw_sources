@@ -77,8 +77,8 @@ def process_ine_geo_layer(year: int, gdf: gpd.GeoDataFrame, path: str) -> None:
         gdf['province_name'] = ""#gdf['NPRO']
         
         gdf = gdf[fields]
-        logger.info(f'Reproject the layer')
-        gdf = gdf.to_crs('epsg:4326')
+        #logger.info(f'Reproject the layer')
+        #gdf = gdf.to_crs('epsg:4326')
         logger.info(f'Dissolve the layer into other levels')
         
         district = gdf.dissolve(by=['province_code','municipality_code','district_code','province_name','municipality_name','district_name']).reset_index()

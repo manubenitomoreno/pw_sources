@@ -309,12 +309,20 @@ def group_data(gdf):
     logger.info(f'count values...')
     cv = pd.pivot_table(cv.reset_index(),values='Part Area in Cadastral Terms', index = ['Parcel Cadastral ID', 'Property Cadastral ID','x','y'],columns = ['Walknet Category'])
     cv = cv.groupby(['x','y']).sum().rename(columns={c:f"{c} - Number" for c in cv.columns})
+    logger.info(f'general parcels values...')
+    common = ['x','y']
+    local = ['Parcel Area', 'Parcel Built Area', 'Parcel Built Area Above Ground','Parcel Built Area Under Ground', 'Parcel Built Area Under Cover']
+    gv = gdf.groupby(common).sum()[local]
+    mv = gdf[common+local].groupby(common).mean()[local]
+    mv.rename(columns = {c:f"{c} - mean" for c in mv.columns}, inplace=True)
     logger.info(f'merging values into final table...')
-    df = pd.concat([cv,pv],axis=1).reset_index()
+    df = pd.concat([cv, pv, gv, mv],axis=1).reset_index()
     
     return df
 
 def json_data(data, columns, idx):
+    for c in columns:
+        data[c] = data[c].astype(str)
     d =  pd.Series(data.set_index(idx)[[c for c in columns if c in data.columns]].to_dict(orient='records'))
     d = d.astype(str).str.replace("'",'"')
     logger.info(f'Making JSON DATA columns...')
@@ -323,13 +331,17 @@ def json_data(data, columns, idx):
 def transform_data(gdf, provider: int):
     logger.info(f'Transforming data...')
     CLASSES = ['Property Land Use Level1', 'Part Typology Level1', 'Part Typology Level2', 'Part Typology Level3', 'Part Land Use Level1', 'Part Land Use Level2']
-    RELATIONS = pd.read_excel(r"C:\Users\ManuBenito\Documents\GitHub\walknet\sources\spain\landuse\catastro\metadata\relations.xls")
+    RELATIONS = pd.read_excel(r"C:\Users\ManuBenito\Documents\GitHub\project_walknet\sources\other\relations.xls")
     for i,row in RELATIONS.iterrows():
         combination = tuple([row[col].split(";") if isinstance(row[col],str) else None for col in CLASSES])
+        
         end_type = row['End Type']
         category = row['Walknet Category']
         gdf = apply_logic(gdf,combination,end_type,category)
+        #print(combination, end_type, category)
         
+    #print(gdf['Walknet Category'].unique())
+    #acho
     gdf = group_data(gdf)
     
     gdf['id'] = np.arange(0,len(gdf),1)
@@ -337,8 +349,14 @@ def transform_data(gdf, provider: int):
     gdf['category'] = 'land use - general'
     gdf['provider'] = provider
     gdf['id'] = gdf['provider'].astype(str)+"-"+gdf['id'].astype(int).astype(str).str.strip()
+    #print(gdf.columns)
+    #print(gdf.head())
     gdf['data'] = json_data(gdf, DATACOLS, 'id' )
-    gdf['geometry'] = gpd.GeoSeries(gpd.points_from_xy(gdf['x'], gdf['y'])).to_wkt()
+    
+    gdf['geometry'] = gpd.GeoSeries(gpd.points_from_xy(gdf['x'], gdf['y']))
+    #gdf.set_crs(inplace = True) TODO Que hacemos con el CRS?
+    gdf = gpd.GeoDataFrame(gdf,geometry='geometry')
+    gdf['geometry'] = gdf['geometry'].to_wkt()
     return gdf[['id','id_class','category','provider','data','geometry']]
 
 def transform_cadastral_data(path: str, codes: str, provider: int):
