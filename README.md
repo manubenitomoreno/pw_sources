@@ -1,7 +1,9 @@
 # Project Walknet (Sources)
 
 ## Description
-Project Walknet (Sources) is a data orchestration program designed for the general Project Walknet, which is part of a PhD Research Project at the Universidad Politécnica de Madrid. This program contains several modules to run data pipelines, save and display performance statistics, an Object-Relational Mapping (ORM) for database interaction, and a directory `/sources` containing the pipelines themselves.
+Project Walknet (Sources) is a data orchestration program designed for the general Project Walknet, which is part of the ACC<15 RTD project (PID2020-116584RB-I00/AEI/10.13039/501100011033) financed by the Spanish
+Ministry of Science and Innovation, at the Universidad Politécnica de Madrid. You can find more details of this program at its [website].(https://blogs.upm.es/proximityplanning/en/)
+This program contains several modules to run data pipelines, save and display performance statistics, an Object-Relational Mapping (ORM) for database interaction, and a directory `/sources` containing the pipelines themselves.
 
 The key components of the repository are as follows:
 
