@@ -92,8 +92,8 @@ def process_ine_geo_layer(year: int, gdf: gpd.GeoDataFrame, path: str) -> None:
         district = district[fields]
     
         municipality = district.dissolve(by=['province_code','municipality_code','province_name','municipality_name']).reset_index()
-        municipality['boundary_code'] = district['municipality_code']
-        municipality['boundary_name'] = district['municipality_name']
+        municipality['boundary_code'] = municipality['municipality_code']
+        municipality['boundary_name'] = municipality['municipality_name']
         municipality['boundary_source'] = ""#'Instituto Nacional de Estadística'
         municipality['boundary_period'] = year
         municipality['boundary_type'] = 'municipality'
