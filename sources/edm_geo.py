@@ -38,7 +38,7 @@ def process_edm_geo_layer(path: str, provider: int) -> None:
         path (str): The path where the processed data should be saved.
     """
     try:
-        gdf = gpd.read_file(f"{path}\level0\ZonificacionZT1259.geojson",crs = 4326)
+        gdf = gpd.read_file(f"{path}\level0\ZonificacionZT1259.shp",crs = 4326)
         gdf = gdf.to_crs(25830)
         gdf['id'] = gdf['ZT1259']
         gdf['id_class'] = "boundary"
