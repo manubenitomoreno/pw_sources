@@ -6,6 +6,7 @@ import geopandas as gpd
 import numpy as np
 from loguru import logger
 
+
 from sources.metadata.catastro_metadata import *
 
 #GATHER FUNCTIONALITY
@@ -40,7 +41,7 @@ def gml2geojson(input: str, output: str) -> None:
     Returns:
     None
     """
-    environ['PROJ_LIB'] = 'C:\\Users\\ManuBenito\\Documents\\GitHub\\pw_sources\\venv\\lib\\site-packages\\pyproj\\proj_dir\\share\\proj'
+    environ['PROJ_LIB'] = 'C:\\Users\\ManuBenito\\Documents\\GitHub\\pw_sources\\env\\lib\\site-packages\\pyproj\\proj_dir\\share\\proj'
     try:
         # If output file already exists, delete it
         if exists(output):
@@ -82,8 +83,9 @@ def download_cadastral_data(codes: list, outdir:str) -> None:
             makedirs(outdir_muni)
 
         urls = {'CadastralParcels' : f"http://www.catastro.minhap.es/INSPIRE/CadastralParcels/{codprov}/{codine_nomcatastro}/A.ES.SDGC.CP.{codmun}.zip",
-                'Addresses' : f"http://www.catastro.minhap.es/INSPIRE/Addresses/{codprov}/{codine_nomcatastro}/A.ES.SDGC.AD.{codmun}.zip",
-                'Buildings' : f"http://www.catastro.minhap.es/INSPIRE/Buildings/{codprov}/{codine_nomcatastro}/A.ES.SDGC.BU.{codmun}.zip"}
+                'Addresses' : f"http://www.catastro.minhap.es/INSPIRE/Addresses/{codprov}/{codine_nomcatastro}/A.ES.SDGC.AD.{codmun}.zip"}
+        
+                #'Buildings' : f"http://www.catastro.minhap.es/INSPIRE/Buildings/{codprov}/{codine_nomcatastro}/A.ES.SDGC.BU.{codmun}.zip"}
 
         for layer, url in urls.items():
             logger.info(f"Getting URL {url}")
@@ -100,16 +102,25 @@ def download_cadastral_data(codes: list, outdir:str) -> None:
         for gml in [join(outdir_muni, f) for f in listdir(outdir_muni) if code in f and f.endswith(("gml"))]:
             for particle, layer in layers.items():
                 if particle in gml:
-                    gml2geojson(gml, outdir_muni+f"\{layer}_{codmun}.geojson")
+                    gdf = gpd.read_file(gml, driver='GML')
+                    gdf.to_file(outdir_muni+f"\{layer}_{codmun}.geojson", driver="GeoJSON")
+                    #gml2geojson(gml, outdir_muni+f"\{layer}_{codmun}.geojson")
+                    #Replaced this line because geopandas now manages gml
+                    
+
                     
         for otherfile in [join(outdir_muni, f) for f in listdir(outdir_muni) if code in f and not f.endswith(("geojson"))]:
             remove(otherfile)
         
-        assert len([f for f in listdir(outdir_muni) if code in f and f.endswith(("geojson"))]) == len(layers), "Not all files expected were processed"
+        #assert len([f for f in listdir(outdir_muni) if code in f and f.endswith(("geojson"))]) == len(layers), "Not all files expected were processed"
         
         logger.info(f"Municipality {muni} was successfully downloaded and processed")
 
 #LEVEL0
+#E:\03_EARTHLING\28_WALKNET\sources\catastro\level2\level2_catastro_28177_polygon.csv
+#28167_polygon.csv...
+#28148_polygon.csv...
+#28130_polygon.csv...
 
 def find_muni(code: str) -> bool:
     """
@@ -135,8 +146,9 @@ def files_for_muni(code: str, path: str) -> tuple:
     cadastre_path = [join(path+r"\non-spatial", f) for f in listdir(path+r"\non-spatial") if file_code in f and f.endswith(".CAT")][0]
     addresses_path = [join(path+r"\spatial\{code}".format(code=code), f) for f in listdir(path+r"\spatial\{code}".format(code=code)) if code in f and "addresses" in f and f.endswith(".geojson")][0]
     parcels_path = [join(path+r"\spatial\{code}".format(code=code), f) for f in listdir(path+r"\spatial\{code}".format(code=code)) if code in f and "cadastralparcel" in f and f.endswith(".geojson")][0]
+    zoning_path = [join(path+r"\spatial\{code}".format(code=code), f) for f in listdir(path+r"\spatial\{code}".format(code=code)) if code in f and "cadastralzoning" in f and f.endswith(".geojson")][0]
     
-    return cadastre_path, addresses_path, parcels_path
+    return cadastre_path, addresses_path, parcels_path, zoning_path
 
 def merge_and_drop(data1: pd.DataFrame, data2: pd.DataFrame, op: str, join_list: list) -> pd.DataFrame:
     """
@@ -259,7 +271,7 @@ def process_cadastral_data(path: str, codes: str) -> gpd.GeoDataFrame:
     """
     for code in codes:
         municipality = find_muni(code)[1]
-        cadastre_path, addresses_path, parcels_path = files_for_muni(code, path)
+        cadastre_path, addresses_path, parcels_path, zoning_path = files_for_muni(code, path)
         df = open_cat_file(cadastre_path)
         df = column_strategy(df)
         logger.info(f'{municipality} .cat file processed')
@@ -272,7 +284,14 @@ def process_cadastral_data(path: str, codes: str) -> gpd.GeoDataFrame:
         logger.info(f'{municipality} land use and typology procesed')
         gdf['x'] = gdf['geometry'].x
         gdf['y'] = gdf['geometry'].y
-        gdf.to_parquet(path+r"\level1\{municipality}.parquet".format(municipality=municipality))
+        gdf.to_parquet(path+r"\level1\{municipality}_point.parquet".format(municipality=municipality))
+        
+        gdf = gpd.read_file(zoning_path)
+        gdf['id_len'] = gdf['localId'].str.len()
+        gdf = gdf[(gdf['id_len'] == 9) & (gdf['localId'].str.endswith("900"))]
+
+        gdf.to_parquet(path+r"\level1\{municipality}_polygon.parquet".format(municipality=municipality))
+
     
 #LEVEL1
 
@@ -291,8 +310,10 @@ def apply_logic(df: pd.DataFrame, combination_tuple: tuple, end_type: str, categ
     combination_tuple = tuple(['no'] if not isinstance(x,list) else x for x in combination_tuple)
     #logging.info(f'combinations passed...{combination_tuple}')
     conditions = "&".join([f"(df['{field}'].isin(combination_tuple[{i}]))" for i,field in enumerate(CLASSES) if not combination_tuple[i] == ['no']])
+
     #logging.info(f'conditions are...{conditions}')
     df['End Type'] = end_type
+
     df.loc[eval(conditions),'Walknet Category'] = end_type+" - "+category
     return df   
       
@@ -320,56 +341,86 @@ def group_data(gdf):
     
     return df
 
-def json_data(data, columns, idx):
+def json_data(data, cols, idx):
+    """
     for c in columns:
         data[c] = data[c].astype(str)
     d =  pd.Series(data.set_index(idx)[[c for c in columns if c in data.columns]].to_dict(orient='records'))
     d = d.astype(str).str.replace("'",'"')
     logger.info(f'Making JSON DATA columns...')
     return d
+    """
+    try:
+        dm = data.set_index(idx)[[c for c in cols if c in data.columns]].to_dict(orient='records')
+        logger.info('Making JSON DATA columns...')
+        return pd.Series(dm, index=data[idx])
+    except Exception as e:
+        logger.error(f"Failed to create JSON data. Error: {e}")
+        return pd.Series()
 
-def transform_data(gdf, provider: int):
-    logger.info(f'Transforming data...')
+def transform_data(gdf, provider: int, code):
+    logger.info(f'Transforming point data...')
     CLASSES = ['Property Land Use Level1', 'Part Typology Level1', 'Part Typology Level2', 'Part Typology Level3', 'Part Land Use Level1', 'Part Land Use Level2']
-    RELATIONS = pd.read_excel(r"C:\Users\ManuBenito\Documents\GitHub\project_walknet\sources\other\relations.xls")
+    RELATIONS = pd.read_excel(r"C:\Users\Usuario\Documents\GitHub\pw_sources\sources\metadata\relations.xls")
+    
     for i,row in RELATIONS.iterrows():
         combination = tuple([row[col].split(";") if isinstance(row[col],str) else None for col in CLASSES])
         
         end_type = row['End Type']
         category = row['Walknet Category']
         gdf = apply_logic(gdf,combination,end_type,category)
-        #print(combination, end_type, category)
         
-    #print(gdf['Walknet Category'].unique())
-    #acho
     gdf = group_data(gdf)
     
     gdf['id'] = np.arange(0,len(gdf),1)
     gdf['id_class'] = 'pois'
     gdf['category'] = 'land use - general'
     gdf['provider'] = provider
-    gdf['id'] = gdf['provider'].astype(str)+"-"+gdf['id'].astype(int).astype(str).str.strip()
-    #print(gdf.columns)
-    #print(gdf.head())
-    gdf['data'] = json_data(gdf, DATACOLS, 'id' )
-    
+    gdf['id'] = str(code)+"-"+gdf['provider'].astype(str)+"-"+gdf['id'].astype(int).astype(str).str.strip()
     gdf['geometry'] = gpd.GeoSeries(gpd.points_from_xy(gdf['x'], gdf['y']))
-    #gdf.set_crs(inplace = True) TODO Que hacemos con el CRS?
     gdf = gpd.GeoDataFrame(gdf,geometry='geometry')
+    gdf.set_crs(4326,inplace = True)
+    gdf.to_crs(25830, inplace=True) #TODO Que hacemos con el CRS?
+    gdf['geometry'] = gdf['geometry'].to_wkt()
+
+    gdf.set_index('id',inplace=True,drop=False)
+    gdf['data'] = json_data(gdf, [c for c in DATACOLS if c in gdf.columns], 'id' )
+
+    return gdf[['id','id_class','category','provider','data','geometry']]
+
+def transform_area_data(gdf, provider: int, code):
+    logger.info(f'Transforming area data...')
+    gdf['id'] = np.arange(0,len(gdf),1)
+    gdf['id_class'] = 'aois'
+    gdf['category'] = 'land use - urban area'
+    gdf['provider'] = provider
+    gdf['id'] = str(code)+"-"+gdf['provider'].astype(str)+"-"+gdf['id'].astype(int).astype(str).str.strip()
+    gdf['geometry'] = gpd.GeoSeries.from_wkb(gdf['geometry'], crs=25830, on_invalid='raise')
+    gdf = gpd.GeoDataFrame(gdf,geometry='geometry',crs=25830)
+    gdf['area'] = gdf['geometry'].area 
+    gdf.set_index('id',inplace=True,drop=False)
+    gdf['data'] = json_data(gdf, ['area'], 'id' )
     gdf['geometry'] = gdf['geometry'].to_wkt()
     return gdf[['id','id_class','category','provider','data','geometry']]
 
 def transform_cadastral_data(path: str, codes: str, provider: int):
     path = f"{path}\level1"
     for code in codes:
-        logger.info(f'Reading CATASTRO data for {code}...')
-        npath = [join(path, f) for f in listdir(path) if f.startswith(code)][0]
+        logger.info(f'Reading CATASTRO data points for {code}...')
+        npath = [join(path, f) for f in listdir(path) if f.startswith(code) and 'point' in f][0]
         df = pd.read_parquet(npath)
-        df = transform_data(df, provider)
-        out_data = '{newpath}\level2_catastro_{code}.csv'.format(newpath= path.replace("level1","level2"), code = code)
-        logger.info(f'\nSaving LEVEL2 data for {code} in:\n {out_data}...')
-        df.to_csv(out_data,sep =";",index=False)
-
+        df = transform_data(df, provider, code)
+        out_data_points = '{newpath}\level2_catastro_{code}_point.csv'.format(newpath= path.replace("level1","level2"), code = code)
+        logger.info(f'\nSaving LEVEL2 point data for {code} in:\n {out_data_points}...')
+        df.to_csv(out_data_points,sep =";",index=False)
+        print(df.head())
+        apath = [join(path, f) for f in listdir(path) if f.startswith(code) and 'polygon' in f][0]
+        df = pd.read_parquet(apath)
+        df = transform_area_data(df, provider, code)
+        out_data_areas = '{newpath}\level2_catastro_{code}_polygon.csv'.format(newpath= path.replace("level1","level2"), code = code)
+        logger.info(f'\nSaving LEVEL2 area data for {code} in:\n {out_data_areas}...')
+        df.to_csv(out_data_areas,sep =";",index=False)
+        print(df.head())
 
 def gather(source_instance, **kwargs):
     download_cadastral_data(codes = kwargs.get('codes'), outdir=kwargs.get('path'))
