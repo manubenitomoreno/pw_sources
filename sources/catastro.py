@@ -369,6 +369,8 @@ def transform_data(gdf, provider: int, code):
         end_type = row['End Type']
         category = row['Walknet Category']
         gdf = apply_logic(gdf,combination,end_type,category)
+
+    
         
     gdf = group_data(gdf)
     
