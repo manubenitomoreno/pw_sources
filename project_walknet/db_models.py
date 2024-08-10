@@ -29,12 +29,12 @@ class AOIs(Base):
     __tablename__ = 'aois'
     __table_args__ = {'schema': 'sources'}
 
-    id = Column(Integer, Sequence('user_id_seq'), primary_key=True)
-    id_class = Column(String(50))
+    id = Column(String(300), primary_key=True)
+    id_class = Column(String(20))
     category = Column(String(50))
-    provider = Column(String(50))
+    provider = Column(String())
     data = Column(JSONB)
-    geometry = Column(Geometry(geometry_type='POLYGON'))
+    geometry = Column(Geometry(geometry_type='MULTIPOLYGON'))
 
 class RoadSegments(Base):
     __tablename__ = 'road_segments'
@@ -134,16 +134,16 @@ class DBManager:
         config = ConfigParser()
         config.read(config_file_path)
         
+        
         # Get the database connection parameters from config
         user = config.get('BBDD_CONNECTION', 'user')
         password = config.get('BBDD_CONNECTION', 'password')
         host = config.get('BBDD_CONNECTION', 'host')
         port = config.get('BBDD_CONNECTION', 'port')
         database = config.get('BBDD_CONNECTION', 'ddbb')
-
         self.engine = create_engine(f'postgresql://{user}:{password}@{host}:{port}/{database}')
         self.session = sessionmaker(bind=self.engine)()
-
+        
     def create_all(self, table_names, target_schema, prefix=""):
         # Convert table names to table classes
         table_classes = [self.get_table_class(table_name) for table_name in table_names]
