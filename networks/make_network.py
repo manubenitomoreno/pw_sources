@@ -109,7 +109,7 @@ def make_network(network: gpd.GeoDataFrame, pois: gpd.GeoDataFrame, chunk_size=1
     
     edges['data'] = edges.apply(lambda row : json_data(row, ['original_id','slope','length','speed_up','speed_down','time_up','time_down','culdesacs','culdesac_length'], 'edge_id'),axis=1)
     
-    edges['geometry'] = edges['geometry'].apply(loads)
+    #edges['geometry'] = edges['geometry'].apply(loads)
     edges['geometry'] = edges['geometry'].apply(lambda x: remove_z_line(x))
     edges = gpd.GeoDataFrame(edges,geometry='geometry')
     

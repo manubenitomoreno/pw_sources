@@ -95,7 +95,7 @@ class Network:
                 road_segments_query = f"SELECT {road_segments_fields} FROM sources.{road_segments_table} s, sources.{extent_table} e WHERE {road_segments_where} AND {spatial_join} AND e.{extent_filter}"
                 
                 self.data['road_segments'] = pd.DataFrame.from_dict(self.db.get_query_results(text(road_segments_query)))
-                #print(road_segments_query)
+
                 self.data['road_segments']['geometry'] = self.data['road_segments']['geometry'].apply(wkt.loads)
                 self.data['road_segments'] = gpd.GeoDataFrame(
                     self.data['road_segments'],

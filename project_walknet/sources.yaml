@@ -10,7 +10,7 @@ amm_network:
 
 osm:
   provider: 2
-  table: pois
+  table: {'_point': 'pois','_polygon': 'aois'}
   description: >
     Open Street Map is a global crowdsourced map dataset.
     Open Street Map takes query dictionaries in the form that OSMPythonTools establish.
@@ -20,19 +20,23 @@ osm:
     'square':{'elementType':['way','relation'],'selector':'"place"="square"','color':'black'},
     'pedestrian':{'elementType':['way','relation'],'selector':'"highway"="pedestrian"','color':'black'},
     'forest':{'elementType':['way','relation'],'selector':'"landuse"="forest"','color':'green'},
+    'wood':{'elementType':['way','relation'],'selector':'"natural"="wood"','color':'green'},
     'bus-stop':{'elementType':'node','selector':'"highway"="bus_stop"','color':'red'},
     'subway-stop': {'elementType':'node','selector':'"railway"="subway_entrance"','color':'red'}
     }
-  areas: ['Alcalá de Henares']
+  areas: ['Alcalá de Henares','Alcobendas','Alcorcón','Boadilla del Monte', 'Brunete','Colmenar Viejo','Coslada','Fuenlabrada','Getafe','Humanes de Madrid','Leganés','Madrid','Majadahonda','Mejorada del Campo','Móstoles','Paracuellos de Jarama','Parla','Pinto','Pozuelo de Alarcón','Rivas-Vaciamadrid', 'Las Rozas de Madrid','San Fernando de Henares', 'San Sebastián de los Reyes', 'Torrejón de Ardoz', 'Velilla de San Antonio', 'Villanueva de la Cañada','Villanueva del Pardillo','Villaviciosa de Odón']
+  #areas: ['Madrid']
 
 catastro:
   provider: 1
-  table: pois
+  #table: pois
+  table: {'_point': 'pois','_polygon': 'aois'}
   description: >
     Catastro is the spanish authority for land use and built environment registration, for tax purposes.
     Takes only Province-Municipality codes to download spatial data from its INSPIRE infrastructure. 
     The data itself needs to be downloaded from the website, with ID authentication.
-  codes: ['28005']
+  codes : ["28005", "28006", "28007", "28022", "28026", "28045", "28049", "28058", "28065", "28073", "28074", "28080", "28084", "28092", "28104", "28106", "28113", "28115", "28127", "28130", "28134", "28148", "28167", "28176", "28177", "28181", "28184", "28900","28123"]
+  #codes : ["28900"]
 
 ine_adrh:
   provider: 3
@@ -41,7 +45,7 @@ ine_adrh:
     The Instituto Nacional de Estadística holds this Atlas de Renta de Hogares project.
     It is an experimental project that provides sociodemographic and socioeconomic data at the level of census tract.
     It is directly downloaded by requesting the site, and parsed and consolidated for target years and codes
-  codes: ['28005']
+  codes : ["28005", "28006", "28007", "28022", "28026", "28045", "28049", "28058", "28065", "28073", "28074", "28080", "28084", "28092", "28104", "28106", "28113", "28115", "28127", "28130", "28134", "28148", "28167", "28176", "28177", "28181", "28903", "28079","28123","28903"]
   years: ['2018']
   tables: ['30824','30832']
 
@@ -52,12 +56,13 @@ ine_geo:
     The Instituto Nacional de Estadística provides the official census tract boundaries in a shapefile format, for each natural year.
     We request the information, build parent level codes (districts and municipalities) and dissolve the geometry to generate their boundary
   years: ['2018']
-  boundary_type: ['census_tract']
+  boundary_type: ['census_tract','district','municipality']
 
 edm2018:
   provider: 5
   table: trip_data
-  codes: ['005']
+  #codes: ['005']
+  codes: ["005", "006", "007", "022", "026", "045", "049", "058", "065", "073", "074", "080", "084", "092", "104", "106", "113", "115", "127", "130", "134", "148", "167", "176", "177", "181", "184", "079","123","903"]
   description: >
     The Consorcio Regional de Transportes de Madrid is the regional transportation authority of Madrid.
     This is a declared trip data survey for 2018.

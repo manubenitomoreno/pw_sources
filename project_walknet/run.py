@@ -143,8 +143,8 @@ def main():
     if args.source: 
         if args.keyname and args.action:
             
-            execution_statistics_file = os.path.join(parent_dir, 'execution_statistics.json')
-            initialize_execution_statistics(execution_statistics_file)
+            #execution_statistics_file = os.path.join(parent_dir, 'execution_statistics.json')
+            #initialize_execution_statistics(execution_statistics_file)
             
             source = Source(keyname=args.keyname)
             
@@ -159,14 +159,14 @@ def main():
             pipeline_logger.bind(pipeline=args.action).info(f"{args.keyname} - Processing finished at: {time.strftime('%Y-%m-%d %H:%M:%S')}, Time Spent: {execution_time:.2f} seconds")
             
             # Generate statistics for datalake and database
-            config = ConfigParser()
-            config.read(os.path.join(parent_dir, 'config.ini'))
-            datalake_path = config.get('DATALAKE', 'path')
-            generate_datalake_statistics(datalake_path)
-            db_manager = DBManager()
-            generate_table_statistics(db_manager)
-            db_manager.close()
-            generate_execution_statistics(args.keyname, args.action, execution_time, execution_statistics_file)
+            #config = ConfigParser()
+            #config.read(os.path.join(parent_dir, 'config.ini'))
+            #datalake_path = config.get('DATALAKE', 'path')
+            #generate_datalake_statistics(datalake_path)
+            #db_manager = DBManager()
+            #generate_table_statistics(db_manager)
+            #db_manager.close()
+            #generate_execution_statistics(args.keyname, args.action, execution_time, execution_statistics_file)
             
             pipeline_logger.info(f"Refreshing stats...")
             
@@ -175,8 +175,8 @@ def main():
     elif args.network:
         if args.keyname and args.action:
             
-            execution_statistics_file = os.path.join(parent_dir, 'execution_statistics.json')
-            initialize_execution_statistics(execution_statistics_file)
+            #execution_statistics_file = os.path.join(parent_dir, 'execution_statistics.json')
+            #initialize_execution_statistics(execution_statistics_file)
             
             network = Network(keyname=args.keyname)
             
@@ -191,14 +191,14 @@ def main():
             pipeline_logger.bind(pipeline=args.action).info(f"{args.keyname} - Processing finished at: {time.strftime('%Y-%m-%d %H:%M:%S')}, Time Spent: {execution_time:.2f} seconds")
             
             # Generate statistics for datalake and database
-            config = ConfigParser()
-            config.read(os.path.join(parent_dir, 'config.ini'))
-            datalake_path = config.get('DATALAKE', 'path')
-            generate_datalake_statistics(datalake_path)
-            db_manager = DBManager()
-            generate_table_statistics(db_manager)
-            db_manager.close()
-            generate_execution_statistics(args.keyname, args.action, execution_time, execution_statistics_file)
+            #config = ConfigParser()
+            #config.read(os.path.join(parent_dir, 'config.ini'))
+            #datalake_path = config.get('DATALAKE', 'path')
+            #generate_datalake_statistics(datalake_path)
+            #db_manager = DBManager()
+            #generate_table_statistics(db_manager)
+            #db_manager.close()
+            #generate_execution_statistics(args.keyname, args.action, execution_time, execution_statistics_file)
             
             pipeline_logger.info(f"Refreshing stats...")
             
@@ -227,7 +227,7 @@ def main():
     #elif args.extraction:
         #if args.keyname and args.action:
         
-    elif not args.list_sources and not args.config_params and not args.reset_db and not args.reset_source:
+    elif not args.list_sources and not args.config_params and not args.reset_database and not args.reset_source:
         parser.error("Either --keyname and --action, or one of --list-sources, --config-params, --reset-all-sources, --reset-source must be provided.") #TODO update
 
 if __name__ == "__main__":
