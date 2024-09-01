@@ -67,7 +67,10 @@ def make_network(network: gpd.GeoDataFrame, pois: gpd.GeoDataFrame, chunk_size=1
     # Final points for our network are the original endpoints of edges, and those interpolated points that have a nearby POI
     points_with_activity = [p.wkt for p in list(nearest.netpointg.unique())]
     original_endpoints = [p.wkt for p in get_lines_endpoints(network.to_wkt())]
-    final_network_points_list = list(set(original_endpoints + points_with_activity))
+    
+    final_network_points_list = [Point(loads(p)) for p in list(set(original_endpoints + points_with_activity))]
+    modified_network['geometry'] = modified_network['geometry'].apply(loads)
+    modified_network = gpd.GeoDataFrame(modified_network,geometry = 'geometry',crs="EPSG:25830")
     
     logger.info(f"Splitting network at relevant vertices")
     #These final points are passed to the network to be split at their location, welding the rest of edges
@@ -104,6 +107,7 @@ def make_network(network: gpd.GeoDataFrame, pois: gpd.GeoDataFrame, chunk_size=1
     logger.info(f"Producing edges")
     #Final treatment of our edges
     edges.rename(columns={'node0_id':'start','node1_id':'end'},inplace=True)
+    logger.info(f"Tagging Culdesacs")
     
     edges = culdesacs(edges)
     
@@ -117,16 +121,18 @@ def make_network(network: gpd.GeoDataFrame, pois: gpd.GeoDataFrame, chunk_size=1
     
     logger.info(f"Producing relations")
     #Final treatment of our relations table (in this process, merely relation with nearest POIs)
-    nearest['relation_id'] = nearest['index']+"|"+nearest['node_id'].astype(str)
+    #print(nearest.columns)
+    #print(nearest)
+    nearest['relation_id'] = nearest['id']+"|"+nearest['node_id'].astype(str)
     nearest['relation_kind'] = 'nearest_poi'
-    nearest['poi_id'] = nearest['index']
+    nearest['poi_id'] = nearest['id']
     
     #I have included a simple line to visualize the relation of the nodes and the POIs
     nearest['geometry'] = nearest.apply(lambda x: remove_z_point(x['geometry']),axis=1)
     nearest['originalg'] = nearest['originalg'].apply(loads)
     nearest['geometry'] = nearest.apply(lambda x: make_line(x['originalg'], x['geometry']),axis=1)
     nearest['geometry'] = nearest.apply(lambda x: x['geometry'].wkt, axis=1)
-    nearest['data'] = nearest.apply(lambda row: json_data(row,['poi_id','node_id','geometry'],'index'),axis=1)
+    nearest['data'] = nearest.apply(lambda row: json_data(row,['poi_id','node_id','geometry'],'id'),axis=1)
     nearest = nearest[['relation_id','relation_kind','data','geometry']]
     
     return edges, nearest, nodes

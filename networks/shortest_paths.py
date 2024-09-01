@@ -2,6 +2,7 @@ import networkx as nx
 import pandas as pd
 import json
 import numpy as np
+from tqdm import tqdm
 
 
 def json_data(row, columns):
@@ -17,10 +18,12 @@ def make_shortest_paths(edges: pd.DataFrame):
     edges['length'] = np.ceil(edges['data'].str['length'])
 
     G = nx.from_pandas_edgelist(edges, "start", "end", edge_attr = ["length"]).to_undirected()
-
-    length = {k: {ke: va for ke, va in v.items() if ke !=k } for k,v in dict(nx.all_pairs_dijkstra_path_length(G, cutoff = 900, weight='length')).items()}
-    path_nodes = {k: {ke: va for ke, va in v.items() if ke !=k } for k,v in dict(nx.all_pairs_dijkstra_path(G, cutoff = 900, weight='length')).items()}
-    ego_graphs = {node: {cut_value :[k for k in nx.single_source_dijkstra_path_length(G, node, cutoff= cut_value, weight='length').keys() if k != node] for cut_value in [300,600,900]} for node in list(G.nodes())}
+    print("Calculating path length")
+    length = {k: {ke: va for ke, va in v.items() if ke !=k } for k,v in tqdm(dict(nx.all_pairs_dijkstra_path_length(G, cutoff = 900, weight='length')).items())}
+    print("Calculating path nodes")
+    path_nodes = {k: {ke: va for ke, va in v.items() if ke !=k } for k,v in tqdm(dict(nx.all_pairs_dijkstra_path(G, cutoff = 900, weight='length')).items())}
+    print("Calculating ego graphs")
+    ego_graphs = {node: {cut_value :[k for k in nx.single_source_dijkstra_path_length(G, node, cutoff= cut_value, weight='length').keys() if k != node] for cut_value in [300,600,900]} for node in tqdm(list(G.nodes()))}
     shortest_paths = pd.concat([pd.Series(path_nodes),pd.Series(length),pd.Series(ego_graphs)],axis = 1).reset_index(drop=False).rename(columns={'index':'node_id',0:'path_nodes',1:'length',2:'ego_graphs'})
     to_concat=[]
     for metric,alias in {'path_nodes':'spn','length':'spl','ego_graphs':'ego'}.items():

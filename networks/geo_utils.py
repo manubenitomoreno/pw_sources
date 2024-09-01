@@ -5,7 +5,8 @@ from shapely.wkt import loads
 from shapely.ops import linemerge, split
 import rtree
 from operator import itemgetter
-
+from shapely.strtree import STRtree
+import tqdm
 
 def find_nearest(data: gpd.GeoDataFrame, data_near: gpd.GeoDataFrame, data_id: str, near_id: str):
     """
@@ -57,13 +58,19 @@ def split_lines_at_points(data: gpd.GeoDataFrame, points: list, kept_attributes:
         gpd.GeoDataFrame: The new network dataset split and welded using the input point list    
     """
     #Note that vertices have to exist in the geometry
-    points = MultiPoint([Point(loads(p)) for p in points])
+    #points = MultiPoint([Point(loads(p)) for p in points])
+    spatial_index = STRtree(points)
+
     mod_dataset = []
-    for row in data.iterrows():
-        if row[1]['geometry'].startswith('MULTILINESTRING Z'):
+    for row in tqdm.tqdm(data.iterrows()):
+        
+        lin = row[1]['geometry']
+ 
+        if lin.geom_type == 'MultiLineString' or lin is None:
+        #if row[1]['geometry'].startswith('MULTILINESTRING Z'):
             continue
-        else:
-            lin = LineString(loads(row[1]['geometry']))
+        #else:
+            #lin = LineString(loads(row[1]['geometry']))
         line_attributes = row[1][kept_attributes].to_dict()
         coord = list(lin.coords)
         #Recalculates longitude and slope here TODO make this maybe more modular
@@ -71,15 +78,22 @@ def split_lines_at_points(data: gpd.GeoDataFrame, points: list, kept_attributes:
         height = heights[0]-heights[1]
         long = lin.length
         slope = height/long
-        inner = MultiPoint([Point(p) for p in coord[1:-1] if Point(p).distance(points) < 1])
+
+               # Use spatial index to find relevant points near the line
+        potential_split_indices = list(spatial_index.query(lin))  # Ensure this returns a list
+        potential_split_points = [points[i] for i in potential_split_indices] 
+
+        inner = [p for p in potential_split_points if lin.distance(p) < 1]
+        
+        #inner = MultiPoint([Point(p) for p in coord[1:-1] if Point(p).distance(points) < 1])
             
         new_data = []
 
-        if inner.is_empty:
+        if not inner:
             new_lines = [lin]
             pass
         else:
-            new_lines = split(lin,inner.geoms[0]).geoms
+            new_lines = split(lin,MultiPoint(inner)).geoms
         for new_line in new_lines:
             attributes = line_attributes
             attr = {'slope':slope,'length':new_line.length,'geometry':new_line.wkt}
@@ -90,6 +104,7 @@ def split_lines_at_points(data: gpd.GeoDataFrame, points: list, kept_attributes:
 
     split_df = pd.concat(mod_dataset)
     return(split_df)
+
 
 def get_lines_endpoints(data: gpd.GeoDataFrame):
     """
