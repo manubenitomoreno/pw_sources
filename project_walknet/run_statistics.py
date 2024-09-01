@@ -105,7 +105,7 @@ def generate_table_statistics(db_manager):
     table_statistics = {}
     inspector = inspect(db_manager.engine)
     for table_name in inspector.get_table_names():
-        if table_name == 'spatial_ref_sys':
+        if table_name in ['spatial_ref_sys','pointcloud_formats','us_gaz','us_lex','us_rules','topology','layer','cousub']:
             continue
         table_class = db_manager.get_table_class(table_name)
         row_count = db_manager.session.query(table_class).count()

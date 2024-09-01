@@ -175,8 +175,12 @@ class DBManager:
             
             
             data['data'] = data['data'].astype(str).str.replace("'",'"')
-            data['data'] = data['data'].apply(json.loads)
-
+            try: 
+                data['data'] = data['data'].apply(json.loads)
+            except Exception as e:
+                print(e)
+                pass
+ 
         data_dict = data.to_dict(orient='records')
 
         try:

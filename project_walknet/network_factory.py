@@ -8,7 +8,7 @@ from sqlalchemy import text
 import pandas as pd
 from networks.make_network import make_network
 from networks.shortest_paths import make_shortest_paths
-from shapely import wkt
+from shapely import wkt, wkb
 import geopandas as gpd
 
 class Network:
@@ -49,8 +49,8 @@ class Network:
         """
         sources_exist = all(self.db.table_exists(table, 'sources') for table in [
             self.metadata.get('road_segments_table'),
-            self.metadata.get('pois_table'),
-            self.metadata.get('extent_table')
+            self.metadata.get('pois_table')#,
+            #self.metadata.get('extent_table')
         ])
 
         network_tables = [f"{self.keyname}_nodes", f"{self.keyname}_edges", f"{self.keyname}_relations"]
@@ -85,7 +85,7 @@ class Network:
         pois_fields = "s.id,s.id_class,s.category,s.provider,s.data, st_asewkt(s.geometry) geometry"
          
         road_segments_query = f"SELECT {road_segments_fields} FROM sources.{road_segments_table} s WHERE {road_segments_where}"
-        pois_query = f"SELECT * FROM {pois_table} s WHERE {pois_where} AND {extent_filter}"
+        pois_query = f"SELECT * FROM sources.{pois_table} s WHERE {pois_where}"
         
         spatial_join = """ST_INTERSECTS(ST_Transform(st_setsrid(st_geomfromewkt(st_asewkt(s.geometry)),25830), 25830),st_setsrid(st_geomfromewkt(st_asewkt(e.geometry)),25830))"""
         
@@ -95,8 +95,8 @@ class Network:
                 road_segments_query = f"SELECT {road_segments_fields} FROM sources.{road_segments_table} s, sources.{extent_table} e WHERE {road_segments_where} AND {spatial_join} AND e.{extent_filter}"
                 
                 self.data['road_segments'] = pd.DataFrame.from_dict(self.db.get_query_results(text(road_segments_query)))
-
                 self.data['road_segments']['geometry'] = self.data['road_segments']['geometry'].apply(wkt.loads)
+                
                 self.data['road_segments'] = gpd.GeoDataFrame(
                     self.data['road_segments'],
                     geometry='geometry',
@@ -104,9 +104,10 @@ class Network:
 
             else:
                 #TODO APPLY WKT BEFORE INSTANTIATING GPD
+                df = pd.DataFrame.from_dict(self.db.get_query_results(text(road_segments_query)))
+                df['geometry'] = df['geometry'].apply(wkt.loads)
                 self.data['road_segments'] = gpd.GeoDataFrame(
-                    pd.DataFrame.from_dict(
-                        self.db.get_query_results(text(road_segments_query))),
+                    df,
                     geometry='geometry',
                     crs = "EPSG:25830")
                 
@@ -127,9 +128,13 @@ class Network:
                                 
             else:
                 #TODO APPLY WKT BEFORE INSTANTIATING GPD
+                df = pd.DataFrame.from_dict(self.db.get_query_results(text(pois_query)))
+                try:
+                    df['geometry'] = df['geometry'].apply(wkt.loads)
+                except:
+                    df['geometry'] = df['geometry'].apply(wkb.loads)
                 self.data['pois'] = gpd.GeoDataFrame(
-                    pd.DataFrame.from_dict(
-                        self.db.get_query_results(text(pois_query))),
+                    df,
                     geometry='geometry',
                     crs = "EPSG:25830")
             logger.info("POIs data ready")
