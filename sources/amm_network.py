@@ -4,7 +4,7 @@ from typing import List
 def transform_amm(path: str, codes: List[str]):
     for code in codes:
         gdf = gpd.read_file(path+f"\level1\level1_amm_network_{code}.gpkg")
-        gdf.drop(columns=['id'], inplace=True)
+        if 'id' in gdf.columns: gdf.drop(columns=['id'], inplace=True)
         gdf.insert(0, 'id', range(0, len(gdf)))
         gdf['id_class'] = 'road_segments'
         gdf['category'] = 'pedestrian'
