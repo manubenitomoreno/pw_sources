@@ -1,18 +1,20 @@
 import pandas as pd
 import geopandas as gpd
 from shapely.geometry import Point, LineString, MultiLineString, MultiPoint
+from shapely.geometry.base import BaseGeometry
 from shapely.wkt import loads
 from shapely.ops import linemerge, split
 import math
 from loguru import logger
+import tqdm
 
 
-import pandas as pd
-import geopandas as gpd
 import numpy as np
 import networkx as nx
 from typing import Dict, Set, Tuple
-from shapely.wkt import loads
+
+from shapely.strtree import STRtree
+from collections import defaultdict
 
 def create_graph_from_edges(in_edges: pd.DataFrame) -> nx.Graph:
     """Create an undirected graph from edge data."""
@@ -20,15 +22,44 @@ def create_graph_from_edges(in_edges: pd.DataFrame) -> nx.Graph:
 
 def update_dangle_flags(in_edges: pd.DataFrame, ends: Set) -> None:
     """Update the dangle flags in the edges DataFrame."""
-    in_edges['start_dangle'] = in_edges['start'].isin(ends).astype(int)
-    in_edges['end_dangle'] = in_edges['end'].isin(ends).astype(int)
+    ends_array = np.array(list(ends))
+    in_edges['start_dangle'] = in_edges['start'].isin(ends_array).astype(int)
+    in_edges['end_dangle'] = in_edges['end'].isin(ends_array).astype(int)
 
 def find_culdesacs(G: nx.Graph, in_edges: pd.DataFrame) -> Dict:
     """Find and return culdesacs from the graph."""
     output = {}
     i = 1
     ends = {c[0] for c in G.degree if c[1] == 1}
+    
+    while ends:
+        update_dangle_flags(in_edges, ends)
+        #in_edges['culdesac'] = in_edges.apply(lambda row: i if row['start_dangle'] == 1 or row['end_dangle'] == 1 else 0, axis=1)
+        in_edges['culdesac'] = np.where((in_edges['start_dangle'] == 1) | (in_edges['end_dangle'] == 1), i, 0) #GPT SUGGESTION
+        #culdesacs = {k: v for k, v in pd.Series(in_edges.culdesac.values, index=in_edges.edge_id).to_dict().items() if v == i}
+        culdesacs = in_edges.loc[in_edges['culdesac'] == i, 'edge_id'].to_dict()
+        
 
+        if not culdesacs:
+            break
+
+        output.update(culdesacs)
+        #in_edges = in_edges[in_edges['culdesac'] != i]
+                # Remove the edges and their nodes from the graph
+        for edge in in_edges[in_edges['culdesac'] == i].itertuples():
+            if G.has_edge(edge.start, edge.end):
+                G.remove_edge(edge.start, edge.end)
+            # Optionally remove nodes that have no remaining connections (degree 0)
+            if edge.start in G and G.degree[edge.start] == 0:
+                G.remove_node(edge.start)
+            if edge.end in G and G.degree[edge.end] == 0:
+                G.remove_node(edge.end)
+        #G = create_graph_from_edges(in_edges)
+        # GPT SUGGESTS Instead of recreating the graph, consider removing nodes directly
+        ends = {c[0] for c in G.degree if c[1] == 1}
+        i += 1
+
+    """
     while True:
         update_dangle_flags(in_edges, ends)
         in_edges['culdesac'] = in_edges.apply(lambda row: i if row['start_dangle'] == 1 or row['end_dangle'] == 1 else 0, axis=1)
@@ -42,13 +73,33 @@ def find_culdesacs(G: nx.Graph, in_edges: pd.DataFrame) -> Dict:
         G = create_graph_from_edges(in_edges)
         ends = {c[0] for c in G.degree if c[1] == 1}
         i += 1
-
+    """
     return output
 
 
 def contiguous_culdesacs(in_edges):
-    depth = list(in_edges['culdesac'].unique())
-    all_cds = {id:[id] for id in list(in_edges[in_edges['culdesac']==1]['edge_id'].unique())}
+    in_edges['geometry'] = in_edges['geometry'].apply(loads)
+    #depth = list(in_edges['culdesac'].unique())
+    #all_cds = {id:[id] for id in list(in_edges[in_edges['culdesac']==1]['edge_id'].unique())}
+    tree = STRtree(in_edges['geometry'])
+    all_cds = defaultdict(list)
+    depth = sorted(in_edges['culdesac'].unique())
+    
+    for d in depth:
+        filtered_edges = in_edges[in_edges['culdesac'] == d]
+        if not filtered_edges.empty:
+            for idx, row in filtered_edges.iterrows():
+                geo = row['geometry']
+                if not isinstance(geo, BaseGeometry):
+                    continue  # Skip if not a valid geometry
+                candidates = tree.query(geo)
+                for candidate in candidates:
+                    if not isinstance(candidate, BaseGeometry):
+                        continue  # Skip if not a valid geometry
+                    if geo.touches(candidate):
+                        all_cds[row['edge_id']].append(candidate)
+
+    """
     for d in depth:
         for id in all_cds.keys():
             last_id = all_cds[id][-1]
@@ -63,7 +114,7 @@ def contiguous_culdesacs(in_edges):
                         pass
             else:
                 pass
-        
+    """    
     # Using 
     result = {}
     for k,v in all_cds.items():
@@ -76,9 +127,12 @@ def culdesacs(in_edges):
     
     """Main function to process edges and return culdesacs."""
     #in_edges['length'] = np.ceil(in_edges['data'].str['length'])
+    print("Creating the graph")
     G = create_graph_from_edges(in_edges)
+    print("Find Culdesacs")
     culdesac_output = find_culdesacs(G, in_edges)
     in_edges['culdesac'] = in_edges['edge_id'].map(culdesac_output)
+    print("Contiguous Culdesacs")
     in_edges['culdesac'] = contiguous_culdesacs(in_edges)
     #print(type(in_edges))
     #print(in_edges.dtypes)
@@ -91,7 +145,10 @@ def culdesacs(in_edges):
     #print(in_edges.dtypes)
     #in_edges['geometry'] = in_edges['geometry']
     #quitar lo que no sea valid?
-    in_edges['geometry'] = in_edges['geometry'].apply(loads)
+
+    print("Re-generate geometry")
+    #in_edges['geometry'] = in_edges['geometry'].apply(loads)
+    print(in_edges)
     in_edges = gpd.GeoDataFrame(in_edges,geometry='geometry')
     length = in_edges.dissolve(by='culdesac').reset_index(drop=False) 
     length['length'] = length['geometry'].length
@@ -99,7 +156,6 @@ def culdesacs(in_edges):
     in_edges['culdesac_length'] = in_edges['culdesac_length'].fillna(0)
     #print(in_edges)
     return in_edges
-
 
 def lines_and_interpolated_vertices(data: gpd.GeoDataFrame, chunk: int, kept_attributes: list):
     """
@@ -116,9 +172,9 @@ def lines_and_interpolated_vertices(data: gpd.GeoDataFrame, chunk: int, kept_att
     """
     mod_dataset = []
     re_mod_dataset = []
-    for row in data.iterrows():
-        lin = row[1]['geometry']
-        line_attributes = row[1][kept_attributes].to_dict()
+    for _,row in tqdm.tqdm(data.iterrows()):
+        lin = row['geometry']
+        line_attributes = row[kept_attributes].to_dict()
         #vertices = MultiPoint(list(lin.coords))
         coord = tuple(lin.coords)
         
@@ -162,7 +218,6 @@ def lines_and_interpolated_vertices(data: gpd.GeoDataFrame, chunk: int, kept_att
             breaks = MultiPoint(interpolated)
             new_lines = split(modified_line,breaks).geoms
             
-
         else:
             modified_line = lin
             new_lines = [modified_line]

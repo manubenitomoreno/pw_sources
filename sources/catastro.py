@@ -117,10 +117,6 @@ def download_cadastral_data(codes: list, outdir:str) -> None:
         logger.info(f"Municipality {muni} was successfully downloaded and processed")
 
 #LEVEL0
-#E:\03_EARTHLING\28_WALKNET\sources\catastro\level2\level2_catastro_28177_polygon.csv
-#28167_polygon.csv...
-#28148_polygon.csv...
-#28130_polygon.csv...
 
 def find_muni(code: str) -> bool:
     """
@@ -287,10 +283,22 @@ def process_cadastral_data(path: str, codes: str) -> gpd.GeoDataFrame:
         gdf.to_parquet(path+r"\level1\{municipality}_point.parquet".format(municipality=municipality))
         
         gdf = gpd.read_file(zoning_path)
-        gdf['id_len'] = gdf['localId'].str.len()
-        gdf = gdf[(gdf['id_len'] == 9) & (gdf['localId'].str.endswith("900"))]
+        
+        if gdf['label'].dtype == object:
+            urban_area = [n for n in URBANAREAS[code]]
+        else:
+            urban_area = [int(n) for n in URBANAREAS[code]]
+        
+        final_gdf = gdf[gdf['label'].isin(urban_area)]
 
-        gdf.to_parquet(path+r"\level1\{municipality}_polygon.parquet".format(municipality=municipality))
+        #if final_gdf.empty: 
+            #print("OJITO")
+            #print(URBANAREAS[code])
+            #print(urban_area)
+            #print(gdf['label'])
+            #print(gdf.dtypes)
+        
+        final_gdf.to_parquet(path+r"\level1\{municipality}_polygon.parquet".format(municipality=municipality))
 
     
 #LEVEL1
@@ -351,6 +359,8 @@ def json_data(data, cols, idx):
     return d
     """
     try:
+        for c in cols:
+            data[c] = data[c].astype(str)
         dm = data.set_index(idx)[[c for c in cols if c in data.columns]].to_dict(orient='records')
         logger.info('Making JSON DATA columns...')
         return pd.Series(dm, index=data[idx])
@@ -361,7 +371,7 @@ def json_data(data, cols, idx):
 def transform_data(gdf, provider: int, code):
     logger.info(f'Transforming point data...')
     CLASSES = ['Property Land Use Level1', 'Part Typology Level1', 'Part Typology Level2', 'Part Typology Level3', 'Part Land Use Level1', 'Part Land Use Level2']
-    RELATIONS = pd.read_excel(r"C:\Users\Usuario\Documents\GitHub\pw_sources\sources\metadata\relations.xls")
+    RELATIONS = pd.read_excel(r"..\sources\metadata\relations.xls")
     
     for i,row in RELATIONS.iterrows():
         combination = tuple([row[col].split(";") if isinstance(row[col],str) else None for col in CLASSES])
@@ -370,8 +380,6 @@ def transform_data(gdf, provider: int, code):
         category = row['Walknet Category']
         gdf = apply_logic(gdf,combination,end_type,category)
 
-    
-        
     gdf = group_data(gdf)
     
     gdf['id'] = np.arange(0,len(gdf),1)
@@ -411,18 +419,22 @@ def transform_cadastral_data(path: str, codes: str, provider: int):
         logger.info(f'Reading CATASTRO data points for {code}...')
         npath = [join(path, f) for f in listdir(path) if f.startswith(code) and 'point' in f][0]
         df = pd.read_parquet(npath)
+        
+        #TODO We should parametrize this filter
+        df = df[df['Building Year Built'] <= 2018]
+        
         df = transform_data(df, provider, code)
+        print(df.head())
         out_data_points = '{newpath}\level2_catastro_{code}_point.csv'.format(newpath= path.replace("level1","level2"), code = code)
         logger.info(f'\nSaving LEVEL2 point data for {code} in:\n {out_data_points}...')
         df.to_csv(out_data_points,sep =";",index=False)
-        print(df.head())
         apath = [join(path, f) for f in listdir(path) if f.startswith(code) and 'polygon' in f][0]
         df = pd.read_parquet(apath)
         df = transform_area_data(df, provider, code)
+        print(df.head())
         out_data_areas = '{newpath}\level2_catastro_{code}_polygon.csv'.format(newpath= path.replace("level1","level2"), code = code)
         logger.info(f'\nSaving LEVEL2 area data for {code} in:\n {out_data_areas}...')
         df.to_csv(out_data_areas,sep =";",index=False)
-        print(df.head())
 
 def gather(source_instance, **kwargs):
     download_cadastral_data(codes = kwargs.get('codes'), outdir=kwargs.get('path'))

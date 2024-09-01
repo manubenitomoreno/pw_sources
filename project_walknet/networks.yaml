@@ -12,3 +12,18 @@ alcala_network:
   extent_filter: data->>'municipality_code' = '28005'
   partition: municipality_code
   metrics: [shortest_paths,ego_graphs]
+
+amm_network: 
+  description:
+  crs: 
+  chunk_size: 100
+  road_segments_table: road_segments
+  road_segments_query: 1=1
+  pois_table: pois
+  aois_table: 
+  pois_query: s.category in ('land use - general')
+  aois_query: 
+  extent_table:
+  extent_filter:
+  partition: municipality_code
+  metrics: [shortest_paths,ego_graphs]
