@@ -126,6 +126,16 @@ def create_paths_table(prefix=""):
 
     return Paths
 
+def create_ego_table(prefix=""):
+    class Ego(Base):
+        __tablename__ = f'{prefix}_ego' if prefix else 'ego'
+        __table_args__ = {'schema': 'networks'}
+        relation_id = Column(String(300), primary_key=True)
+        relation_kind = Column(String(300))
+        data = Column(JSONB)
+
+    return Ego
+
 class DBManager:
     def __init__(self):
         # Initialize ConfigParser and read the config.ini file from the parent directory
@@ -157,6 +167,7 @@ class DBManager:
             Edges = create_edges_table(prefix)
             Relations = create_relations_table(prefix)
             Paths = create_paths_table(prefix)
+            Ego = create_ego_table(prefix)
             
             # Add them to Base metadata
             tables_to_create = [
@@ -164,6 +175,7 @@ class DBManager:
                 Edges.metadata.tables.get(f"{Edges.__table_args__['schema']}.{Edges.__tablename__}"),
                 Relations.metadata.tables.get(f"{Relations.__table_args__['schema']}.{Relations.__tablename__}"),
                 Paths.metadata.tables.get(f"{Paths.__table_args__['schema']}.{Paths.__tablename__}"),
+                Ego.metadata.tables.get(f"{Ego.__table_args__['schema']}.{Ego.__tablename__}"),
             ]
             Base.metadata.create_all(self.engine, tables=tables_to_create)
 
@@ -248,7 +260,7 @@ class DBManager:
             }
 
         # If it's one of the dynamic tables, then generate it using the prefix
-        if table_name in ["nodes", "edges", "relations", "paths"]:
+        if table_name in ["nodes", "edges", "relations", "paths", "ego"]:
             if table_name == "nodes":
                 return create_nodes_table(prefix)
             elif table_name == "edges":
@@ -256,6 +268,8 @@ class DBManager:
             elif table_name == "relations":
                 return create_relations_table(prefix)
             elif table_name == "paths":
+                return create_paths_table(prefix)
+            elif table_name == "ego":
                 return create_paths_table(prefix)
         
         # Otherwise, use the static mapping
@@ -286,7 +300,7 @@ class DBManager:
     def delete_network_data(self, network_name):
         """Delete all data for a specific network in the database."""
         # The table names associated with this network
-        table_names = [f"{network_name}_nodes", f"{network_name}_edges", f"{network_name}_relations", f"{network_name}_paths"]
+        table_names = [f"{network_name}_nodes", f"{network_name}_edges", f"{network_name}_relations", f"{network_name}_paths",f"{network_name}_ego"]
 
         for table_name in table_names:
             if self.table_exists(table_name, target_schema="networks"):

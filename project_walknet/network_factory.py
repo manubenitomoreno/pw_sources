@@ -105,6 +105,7 @@ class Network:
             else:
                 #TODO APPLY WKT BEFORE INSTANTIATING GPD
                 df = pd.DataFrame.from_dict(self.db.get_query_results(text(road_segments_query)))
+                print(df)
                 df['geometry'] = df['geometry'].apply(wkt.loads)
                 self.data['road_segments'] = gpd.GeoDataFrame(
                     df,
@@ -236,12 +237,19 @@ class Network:
             tables = self.call_network_tables(['edges'])
             tables['edges'] = tables['edges'].drop(columns='geometry')
             logger.info("Computing shortest paths")
-            paths = make_shortest_paths(tables['edges'])
+            data_tables = make_shortest_paths(tables['edges'])
             #print(paths)
             
-            paths_path = os.path.join(self.path, 'paths.csv')
-            paths.to_csv(paths_path, sep=";", index=False)
-            logger.info(f"Saved paths data to {paths_path}")
+            paths_nodes_path = os.path.join(self.path, 'paths_nodes.csv')
+            length_path = os.path.join(self.path, 'length.csv')
+            ego_graphs_path = os.path.join(self.path, 'ego_graphs.csv')
+            
+            data_tables['path_nodes'].to_csv(paths_nodes_path, sep=";", index=False)
+            logger.info(f"Saved paths data to {paths_nodes_path}")
+            data_tables['length'].to_csv(length_path, sep=";", index=False)
+            logger.info(f"Saved paths data to {paths_nodes_path}")
+            data_tables['ego_graphs'].to_csv(ego_graphs_path, sep=";", index=False)
+            logger.info(f"Saved paths data to {paths_nodes_path}")
             
         #paths_table = f"{self.keyname}_paths"
         #paths_exist = self.db.table_exists(paths_table, 'networks')
@@ -249,6 +257,14 @@ class Network:
         #if not paths_exist:
             #logger.info("Creating tables in the database...")
             #self.db.create_paths_table(self.keyname)
+        
+        paths_class = self.db.get_table_class("paths", self.keyname)
+        logger.info(f"Uploading data from {paths_path} to the database...")
+        self.db.add_data_from_csv(paths_class, paths_path)
+
+        paths_class = self.db.get_table_class("paths", self.keyname)
+        logger.info(f"Uploading data from {paths_path} to the database...")
+        self.db.add_data_from_csv(paths_class, paths_path)
         
         paths_class = self.db.get_table_class("paths", self.keyname)
         logger.info(f"Uploading data from {paths_path} to the database...")

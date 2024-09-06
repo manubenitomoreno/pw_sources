@@ -33,7 +33,6 @@ def find_culdesacs(G: nx.Graph, in_edges: pd.DataFrame) -> Dict:
         #culdesacs = {k: v for k, v in pd.Series(in_edges.culdesac.values, index=in_edges.edge_id).to_dict().items() if v == i}
         culdesacs = in_edges.loc[in_edges['culdesac'] == i, 'edge_id'].to_dict()
         
-
         if not culdesacs:
             break
 
