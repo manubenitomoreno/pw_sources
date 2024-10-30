@@ -1,0 +1,26 @@
+fn_density:
+  description: "Generate monthly report from transaction data"
+  params:
+    proximity: ['300','600','900']
+    pois: True
+  sql_file: "fn_density"
+
+network_centrality:
+  description: "Generate monthly report from transaction data"
+  params:
+    zone_name: 'boundary-transportation_zone'
+  sql_file: "network_centrality"
+
+fn_design:
+  description: "Generate monthly report from transaction data"
+  params:
+    proximity: ['300','600','900']
+    pois: True
+  sql_file: "fn_design"
+
+fn_far_localacc:
+  description: "Generate monthly report from transaction data"
+  params:
+    proximity: ['300','600','900']
+    pois: True
+  sql_file: "fn_design"
