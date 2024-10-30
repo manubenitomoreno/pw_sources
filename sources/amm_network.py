@@ -2,13 +2,16 @@ import geopandas as gpd
 from typing import List
 
 def transform_amm(path: str, codes: List[str]):
+    id_range = 0
     for code in codes:
-        gdf = gpd.read_file(path+f"\level1\level1_amm_network_{code}.gpkg")
+        gdf = gpd.read_file(path+f"\level1\level1_amm_network_{code}.gpkg", layer =f'level1_amm_network_{code}')
         if 'id' in gdf.columns: gdf.drop(columns=['id'], inplace=True)
-        gdf.insert(0, 'id', range(0, len(gdf)))
+        gdf.insert(id_range, 'id', range(id_range, id_range + len(gdf)))
+        id_range = id_range + len(gdf)
+        print(id_range)
         gdf['id_class'] = 'road_segments'
         gdf['category'] = 'pedestrian'
-        gdf['provider'] = 'Various'
+        gdf['provider'] = gdf['networkGrp']
         gdf = gdf.explode(ignore_index=True)
         gdf['length'] = gdf.apply(lambda x: round(x['geometry'].length,2), axis = 1)
         gdf['data'] = "{'length': '" +gdf['length'].astype(str)+"'}"

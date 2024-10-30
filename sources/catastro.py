@@ -340,7 +340,11 @@ def group_data(gdf):
     cv = cv.groupby(['x','y']).sum().rename(columns={c:f"{c} - Number" for c in cv.columns})
     logger.info(f'general parcels values...')
     common = ['x','y']
-    local = ['Parcel Area', 'Parcel Built Area', 'Parcel Built Area Above Ground','Parcel Built Area Under Ground', 'Parcel Built Area Under Cover']
+    local = ['Building Year Built', 'Parcel Area', 'Parcel Built Area', 'Parcel Built Area Above Ground','Parcel Built Area Under Ground', 'Parcel Built Area Under Cover']
+    #print(len(gdf))
+    #We are aggregating only one value per parcel here...might not work for building age
+    gdf.drop_duplicates(subset='Parcel Cadastral ID',inplace=True)
+    #print(len(gdf))
     gv = gdf.groupby(common).sum()[local]
     mv = gdf[common+local].groupby(common).mean()[local]
     mv.rename(columns = {c:f"{c} - mean" for c in mv.columns}, inplace=True)
