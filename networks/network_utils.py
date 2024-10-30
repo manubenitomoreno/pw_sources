@@ -18,111 +18,65 @@ from collections import defaultdict
 
 def create_graph_from_edges(in_edges: pd.DataFrame) -> nx.Graph:
     """Create an undirected graph from edge data."""
-    return nx.from_pandas_edgelist(in_edges, "start", "end", edge_attr=["length"]).to_undirected()
+    # Create an undirected graph directly from the edge list
+    #return nx.from_pandas_edgelist(in_edges, "start", "end", edge_attr=["length"], create_using=nx.Graph)
+        
+    G = nx.from_pandas_edgelist(in_edges, "start", "end", edge_attr=["length"], create_using=nx.Graph)
+    
+    #print(f"Graph created with {G.number_of_nodes()} nodes and {G.number_of_edges()} edges")
+    return G
 
-def update_dangle_flags(in_edges: pd.DataFrame, ends: Set) -> None:
+def update_dangle_flags(in_edges: pd.DataFrame, ends: Set) -> pd.DataFrame:
     """Update the dangle flags in the edges DataFrame."""
-    ends_array = np.array(list(ends))
-    in_edges['start_dangle'] = in_edges['start'].isin(ends_array).astype(int)
-    in_edges['end_dangle'] = in_edges['end'].isin(ends_array).astype(int)
+    # Use the ends directly as a set without converting to array
+    #print(f"Ends: {ends}")
+    in_edges['start_dangle'] = in_edges['start'].isin(ends).astype(int)
+    in_edges['end_dangle'] = in_edges['end'].isin(ends).astype(int)
+    #print(in_edges[['start', 'end', 'start_dangle', 'end_dangle']].head())
+    return in_edges  # Ensure it returns the updated DataFrame
 
 def find_culdesacs(G: nx.Graph, in_edges: pd.DataFrame) -> Dict:
     """Find and return culdesacs from the graph."""
+    
     output = {}
     i = 1
-    ends = {c[0] for c in G.degree if c[1] == 1}
-    
+    ends = {c[0] for c in G.degree if c[1] == 1}  # Find degree 1 nodes (ends)
+    #print(f"Initial ends (degree 1 nodes): {ends}")
     while ends:
-        update_dangle_flags(in_edges, ends)
-        #in_edges['culdesac'] = in_edges.apply(lambda row: i if row['start_dangle'] == 1 or row['end_dangle'] == 1 else 0, axis=1)
-        in_edges['culdesac'] = np.where((in_edges['start_dangle'] == 1) | (in_edges['end_dangle'] == 1), i, 0) #GPT SUGGESTION
-        #culdesacs = {k: v for k, v in pd.Series(in_edges.culdesac.values, index=in_edges.edge_id).to_dict().items() if v == i}
-        culdesacs = in_edges.loc[in_edges['culdesac'] == i, 'edge_id'].to_dict()
-        
+        # Update dangle flags for current edges
+        in_edges = update_dangle_flags(in_edges, ends)
 
+        # Mark culdesacs in the edges DataFrame
+        in_edges['culdesac'] = np.where((in_edges['start_dangle']) | (in_edges['end_dangle']), i, 0)
+        # Verificar si hay culdesacs
+        #print(f"Culdesacs detected at iteration {i}:")
+        #print(in_edges[in_edges['culdesac'] == i])
+        # Filter edges that are part of culdesacs
+        culdesacs = in_edges[in_edges['culdesac'] == i].set_index('edge_id')['culdesac'].to_dict()
+        #print(culdesacs)
         if not culdesacs:
+            #print(f"No culdesacs found at iteration {i}, exiting loop.")
             break
-
+        
+        # Add the found culdesacs to the output dictionary
         output.update(culdesacs)
-        #in_edges = in_edges[in_edges['culdesac'] != i]
-                # Remove the edges and their nodes from the graph
+        
+        # Remove culdesac edges and isolated nodes from the graph
         for edge in in_edges[in_edges['culdesac'] == i].itertuples():
             if G.has_edge(edge.start, edge.end):
                 G.remove_edge(edge.start, edge.end)
-            # Optionally remove nodes that have no remaining connections (degree 0)
             if edge.start in G and G.degree[edge.start] == 0:
                 G.remove_node(edge.start)
             if edge.end in G and G.degree[edge.end] == 0:
                 G.remove_node(edge.end)
-        #G = create_graph_from_edges(in_edges)
-        # GPT SUGGESTS Instead of recreating the graph, consider removing nodes directly
+        
+        # Recompute ends (degree 1 nodes) after removing edges/nodes
         ends = {c[0] for c in G.degree if c[1] == 1}
+        #print(f"New ends after iteration {i}: {ends}")
         i += 1
+    #print(f"Final output: {output}")
+    return output  # Return the dictionary of culdesacs
 
-    """
-    while True:
-        update_dangle_flags(in_edges, ends)
-        in_edges['culdesac'] = in_edges.apply(lambda row: i if row['start_dangle'] == 1 or row['end_dangle'] == 1 else 0, axis=1)
-        culdesacs = {k: v for k, v in pd.Series(in_edges.culdesac.values, index=in_edges.edge_id).to_dict().items() if v == i}
-
-        if not culdesacs:
-            break
-
-        output.update(culdesacs)
-        in_edges = in_edges[in_edges['culdesac'] != i]
-        G = create_graph_from_edges(in_edges)
-        ends = {c[0] for c in G.degree if c[1] == 1}
-        i += 1
-    """
-    return output
-
-
-def contiguous_culdesacs(in_edges):
-    in_edges['geometry'] = in_edges['geometry'].apply(loads)
-    #depth = list(in_edges['culdesac'].unique())
-    #all_cds = {id:[id] for id in list(in_edges[in_edges['culdesac']==1]['edge_id'].unique())}
-    tree = STRtree(in_edges['geometry'])
-    all_cds = defaultdict(list)
-    depth = sorted(in_edges['culdesac'].unique())
-    
-    for d in depth:
-        filtered_edges = in_edges[in_edges['culdesac'] == d]
-        if not filtered_edges.empty:
-            for idx, row in filtered_edges.iterrows():
-                geo = row['geometry']
-                if not isinstance(geo, BaseGeometry):
-                    continue  # Skip if not a valid geometry
-                candidates = tree.query(geo)
-                for candidate in candidates:
-                    if not isinstance(candidate, BaseGeometry):
-                        continue  # Skip if not a valid geometry
-                    if geo.touches(candidate):
-                        all_cds[row['edge_id']].append(candidate)
-
-    """
-    for d in depth:
-        for id in all_cds.keys():
-            last_id = all_cds[id][-1]
-            filter_contiguous = in_edges[in_edges['culdesac']==d+1]
-            if not filter_contiguous.empty:
-                geo = loads(in_edges[in_edges['edge_id']==last_id]['geometry'].values[0])
-                for i, row in filter_contiguous.iterrows():
-                    candidate = loads(row['geometry'])
-                    if candidate.touches(geo):
-                        all_cds[id].append(row['edge_id'])
-                    else:
-                        pass
-            else:
-                pass
-    """    
-    # Using 
-    result = {}
-    for k,v in all_cds.items():
-        for val in v:
-            result[val] = k
-    
-    return in_edges['edge_id'].map(result)
-    
 def culdesacs(in_edges):
     
     """Main function to process edges and return culdesacs."""
@@ -132,29 +86,7 @@ def culdesacs(in_edges):
     print("Find Culdesacs")
     culdesac_output = find_culdesacs(G, in_edges)
     in_edges['culdesac'] = in_edges['edge_id'].map(culdesac_output)
-    print("Contiguous Culdesacs")
-    in_edges['culdesac'] = contiguous_culdesacs(in_edges)
-    #print(type(in_edges))
-    #print(in_edges.dtypes)
-    #print(set([type(f) for f in in_edges['geometry'].values]))
-    #geometry = {i: str(g) if isinstance(g,str) else g.wkt for i, g in enumerate(in_edges['geometry'].values)}
-    #in_edges['geometry'] = pd.Series(geometry)
-    #print(in_edges.columns)
-    
-    #in_edges['geometry'] = gpd.GeoSeries(in_edges['geometry']).make_valid()
-    #print(in_edges.dtypes)
-    #in_edges['geometry'] = in_edges['geometry']
-    #quitar lo que no sea valid?
-
-    print("Re-generate geometry")
-    #in_edges['geometry'] = in_edges['geometry'].apply(loads)
-    print(in_edges)
-    in_edges = gpd.GeoDataFrame(in_edges,geometry='geometry')
-    length = in_edges.dissolve(by='culdesac').reset_index(drop=False) 
-    length['length'] = length['geometry'].length
-    in_edges['culdesac_length'] = in_edges['culdesac'].map(pd.Series(length['length'].values,index=length['culdesac']).to_dict())
-    in_edges['culdesac_length'] = in_edges['culdesac_length'].fillna(0)
-    #print(in_edges)
+    in_edges['culdesac'].fillna(0, inplace=True)
     return in_edges
 
 def lines_and_interpolated_vertices(data: gpd.GeoDataFrame, chunk: int, kept_attributes: list):
@@ -245,7 +177,6 @@ def lines_and_interpolated_vertices(data: gpd.GeoDataFrame, chunk: int, kept_att
     fin2 = pd.concat(re_mod_dataset)
     return (fin1,fin2)
 
-
 #TODO an average speed of 4km/h is currently hard-coded. Consider parametrizing this to enable different pedestrian modes
 def tobler_speed_up(length,slope):
     """
@@ -259,6 +190,7 @@ def tobler_speed_up(length,slope):
     """
     #enters in radians and meters, gives minutes
     return round(4*(math.exp(-3.5*abs(slope+0.05)))*16.67,2)
+
 def tobler_speed_down(length,slope):
     """
     Calculates up slope speed according to Tobler's Hitchiker equation
@@ -298,11 +230,13 @@ def make_network_ids(edges: gpd.GeoDataFrame):
         gpd.GeoDataFrame, gpd.GeoDataFrame: A tuple with both GeoDataFrames, edges and nodes, labelled accordingly to the network they pertain to
     """
     nodes = {}
+    provider_nodes = {}
     edges_nodes = {}
     edges.insert(0, 'edge_id', range(0,len(edges)))
     node_id = 0
 
     for i, row in edges.iterrows():
+        provider = row['provider']
         lin = loads(row['geometry'])
         l = list(lin.coords)
         ends = [l[0],l[-1]]
@@ -314,12 +248,20 @@ def make_network_ids(edges: gpd.GeoDataFrame):
             else:
                 node_id += 1
                 nodes.update({end:node_id})
+                provider_nodes.update({node_id:provider})
                 
     edges['node0'] = edges['edge_id'].map({k:v[0] for k,v in edges_nodes.items()})
     edges['node1'] = edges['edge_id'].map({k:v[1] for k,v in edges_nodes.items()})
     
     edges['node0_id'] = edges['node0'].map(nodes)
     edges['node1_id'] = edges['node1'].map(nodes)
+
     nodes = pd.DataFrame(nodes.items(), columns=['geometry', 'node_id'])
+    nodes['provider'] = nodes['node_id'].map(provider_nodes)
+
     return edges, nodes
         
+def calculate_degree(in_edges):
+    G = create_graph_from_edges(in_edges)
+    degree = {d[0]:d[1] for d in G.degree}
+    return degree

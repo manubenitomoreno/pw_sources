@@ -115,6 +115,6 @@ def culdesacs(in_edges):
     length = gpd.GeoDataFrame(in_edges,geometry='geometry').dissolve(by='culdesac').reset_index(drop=False)
     length['length'] = length['geometry'].length
     in_edges['culdesac_length'] = in_edges['culdesac'].map(pd.Series(length['length'].values,index=length['culdesac']).to_dict())
-    #print(in_edges)
+    
     return in_edges
 

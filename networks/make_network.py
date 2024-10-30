@@ -29,18 +29,20 @@ def make_network(network: gpd.GeoDataFrame, pois: gpd.GeoDataFrame, chunk_size=1
     - nearest: DataFrame indicating the nearest network points for each POI.
     - final_network_points: DataFrame of the final network points.
     """
+    import ast
     network['original_id'] = network['id']
+    
     logger.info(f"Interpolating intermediate vertices")
     # Create measure points by splitting original network into specified chunks and retrieving all the resulting line intersections
     split_interpolated_network, modified_network = lines_and_interpolated_vertices(
         network,
         chunk_size,
-        ['original_id','id'])
+        ['original_id','id','provider'])
     logger.info(f"Setting possible measure points (points near a POI)")
     measure_points = gpd.GeoDataFrame(
         get_lines_endpoints(split_interpolated_network),
         columns=['geometry'])
-    
+
     measure_points['netpoint'] = measure_points.index
     
     # Measure points comprise both the new interpolated points and the original line endpoints
@@ -77,8 +79,8 @@ def make_network(network: gpd.GeoDataFrame, pois: gpd.GeoDataFrame, chunk_size=1
     final_split_network = split_lines_at_points(
         modified_network,
         final_network_points_list,
-        ['id','original_id'])
-    
+        ['id','original_id','provider'])
+    #print(final_split_network)
     logger.info(f"Calculating slope and speed")
     #We then calculate speed, yet we could calculate other attributes here
     final_split_network = calculate_speed_by_slope(final_split_network, 'length', 'slope') #TODO please write some tests for this
@@ -88,7 +90,7 @@ def make_network(network: gpd.GeoDataFrame, pois: gpd.GeoDataFrame, chunk_size=1
     #And extract coherently labelled edges and nodes
     final_split_network.drop_duplicates(subset=['geometry'],inplace=True)
     edges, nodes = make_network_ids(final_split_network) 
-
+    #print(nodes)
     logger.info(f"Producing nodes")
     #Some geometric treatment for our nodes, these would be interesting to include inside make_network_ids function TODO
     #The removal of Z point is necessary for POSTGIS management, it does not support Z coords
@@ -99,10 +101,10 @@ def make_network(network: gpd.GeoDataFrame, pois: gpd.GeoDataFrame, chunk_size=1
     #TODO again, the process yields duplicates somehow
     nearest = find_nearest(nearest[['id', 'originalg', 'geometry']], nodes, 'id', 'node_id')
     nearest.drop_duplicates(inplace=True)
-    
+
     #Final treatment of our nodes
     nodes = gpd.GeoDataFrame(nodes)
-    nodes = nodes[['node_id','geometry']]
+    nodes = nodes[['node_id','provider','geometry']]
     
     logger.info(f"Producing edges")
     #Final treatment of our edges
@@ -110,14 +112,21 @@ def make_network(network: gpd.GeoDataFrame, pois: gpd.GeoDataFrame, chunk_size=1
     logger.info(f"Tagging Culdesacs")
     
     edges = culdesacs(edges)
+    #print(edges.culdesac.unique())
+
+    nodes['degree'] = nodes['node_id'].map(calculate_degree(edges))
     
-    edges['data'] = edges.apply(lambda row : json_data(row, ['original_id','slope','length','speed_up','speed_down','time_up','time_down','culdesacs','culdesac_length'], 'edge_id'),axis=1)
+    edges['data'] = edges.apply(lambda row : json_data(row, ['original_id','slope','length','speed_up','speed_down','time_up','time_down','culdesac'], 'edge_id'),axis=1)
     
-    #edges['geometry'] = edges['geometry'].apply(loads)
+    edges['geometry'] = edges['geometry'].apply(loads)
     edges['geometry'] = edges['geometry'].apply(lambda x: remove_z_line(x))
     edges = gpd.GeoDataFrame(edges,geometry='geometry')
     
-    edges = edges[['edge_id','data','start','end','geometry']]
+    edges = edges[['edge_id','provider','data','start','end','geometry']]
+
+    
+    nodes['data'] = nodes.apply(lambda row : json_data(row, ['degree'], 'node_id'),axis=1)
+    nodes = nodes[['node_id','provider','data','geometry']]
     
     logger.info(f"Producing relations")
     #Final treatment of our relations table (in this process, merely relation with nearest POIs)
@@ -133,6 +142,8 @@ def make_network(network: gpd.GeoDataFrame, pois: gpd.GeoDataFrame, chunk_size=1
     nearest['geometry'] = nearest.apply(lambda x: make_line(x['originalg'], x['geometry']),axis=1)
     nearest['geometry'] = nearest.apply(lambda x: x['geometry'].wkt, axis=1)
     nearest['data'] = nearest.apply(lambda row: json_data(row,['poi_id','node_id','geometry'],'id'),axis=1)
-    nearest = nearest[['relation_id','relation_kind','data','geometry']]
+    nearest['provider'] = nearest['node_id'].map(pd.Series(nodes.provider.values,index=nodes.node_id).to_dict()
+)
+    nearest = nearest[['relation_id','provider','relation_kind','data','geometry']]
     
     return edges, nearest, nodes

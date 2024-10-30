@@ -14,35 +14,46 @@ def json_data(row, columns):
 
 #edges = pd.read_csv(r"C:\Users\ManuBenito\Documents\Walknet-DataLake\networks\alcala_network\edges.csv", sep =";")
 def make_shortest_paths(edges: pd.DataFrame):
+    print(edges)
     #edges['data'] = edges.apply(lambda x: json.loads(x['data']), axis = 1)
     edges['length'] = np.ceil(edges['data'].str['length'])
+    
+    provider = pd.Series(edges['provider'].values, index=edges['start']).to_dict()
 
     G = nx.from_pandas_edgelist(edges, "start", "end", edge_attr = ["length"]).to_undirected()
     print("Calculating path length")
     length = {k: {ke: va for ke, va in v.items() if ke !=k } for k,v in tqdm(dict(nx.all_pairs_dijkstra_path_length(G, cutoff = 900, weight='length')).items())}
-    print("Calculating path nodes")
-    path_nodes = {k: {ke: va for ke, va in v.items() if ke !=k } for k,v in tqdm(dict(nx.all_pairs_dijkstra_path(G, cutoff = 900, weight='length')).items())}
+    #print("Calculating path nodes")
+    #path_nodes = {k: {ke: va for ke, va in v.items() if ke !=k } for k,v in tqdm(dict(nx.all_pairs_dijkstra_path(G, cutoff = 900, weight='length')).items())}
     print("Calculating ego graphs")
     ego_graphs = {node: {cut_value :[k for k in nx.single_source_dijkstra_path_length(G, node, cutoff= cut_value, weight='length').keys() if k != node] for cut_value in [300,600,900]} for node in tqdm(list(G.nodes()))}
     
-    path_nodes = pd.Series(path_nodes).reset_index(drop=False).rename(columns={'index':'node_id',0:'path_nodes'})
+    #path_nodes = pd.Series(path_nodes).reset_index(drop=False).rename(columns={'index':'node_id',0:'path_nodes'})
     length = pd.Series(length).reset_index(drop=False).rename(columns={'index':'node_id',0:'length'})
     ego_graphs = pd.Series(ego_graphs).reset_index(drop=False).rename(columns={'index':'node_id',0:'ego_graphs'})
     
+    """
     path_nodes['relation_id'] = path_nodes.apply(lambda x: f"path_nodes|{x['node_id']}",axis=1)
     path_nodes['relation_kind'] = 'path_nodes'
     path_nodes['data'] = path_nodes['path_nodes']
-    path_nodes = path_nodes[['relation_id','relation_kind','data']]
+    path_nodes['provider'] = path_nodes['node_id'].map(provider)
+    path_nodes = path_nodes[['relation_id','provider','relation_kind','data']]
+    path_nodes['data'] = path_nodes.apply(lambda x: json.dumps(x['data']),axis=1)
+    """
 
     length['relation_id'] = length.apply(lambda x: f"length|{x['node_id']}",axis=1)
     length['relation_kind'] = 'length'
     length['data'] = length['length']
-    length = length[['relation_id','relation_kind','data']]
+    length['provider'] = length['node_id'].map(provider)
+    length = length[['relation_id','provider','relation_kind','data']]
+    length['data'] = length.apply(lambda x: json.dumps(x['data']),axis=1)
 
     ego_graphs['relation_id'] = ego_graphs.apply(lambda x: f"ego_graphs|{x['node_id']}",axis=1)
     ego_graphs['relation_kind'] = 'ego_graphs'
     ego_graphs['data'] = ego_graphs['ego_graphs']
-    ego_graphs = ego_graphs[['relation_id','relation_kind','data']]
+    ego_graphs['provider'] = ego_graphs['node_id'].map(provider)
+    ego_graphs = ego_graphs[['relation_id','provider','relation_kind','data']]
+    ego_graphs['data'] = ego_graphs.apply(lambda x: json.dumps(x['data']),axis=1)
     
     """
     shortest_paths = pd.concat([pd.Series(path_nodes),pd.Series(length),pd.Series(ego_graphs)],axis = 1).reset_index(drop=False).rename(columns={'index':'node_id',0:'path_nodes',1:'length',2:'ego_graphs'})
@@ -58,5 +69,5 @@ def make_shortest_paths(edges: pd.DataFrame):
     df['data'] = df.apply(lambda x: json.dumps(x['data']),axis=1)
     #df['data']
     """
-
-    return {'path_nodes':path_nodes,'length':length,'ego_graphs':ego_graphs}
+    #{'path_nodes':path_nodes,'length':length,'ego_graphs':ego_graphs}
+    return {'length':length,'ego_graphs':ego_graphs}
