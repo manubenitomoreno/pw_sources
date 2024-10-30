@@ -145,7 +145,7 @@ ROUND(cast(SUM(population_age_18) as NUMERIC),0) as population_age_18,
 ROUND(cast(SUM(population_age_65) as NUMERIC),0) as population_age_65,
 ROUND(cast(SUM(rent_hog_gross * housing_number) / nullif(sum(housing_number),0)  as NUMERIC),0) as rent_hog_gross,
 ROUND(cast(SUM(mean_household_size * housing_number) / nullif(sum(housing_number),0) as NUMERIC),2) as mean_household_size,
-ROUND(cast(SUM(mean_age * population) / nullif(sum(population),0) as NUMERIC),2) as mean_age
+ROUND(cast(SUM(mean_age * population) / nullif(sum(population),0) as NUMERIC),2) as mean_age,
 ROUND(cast(SUM(housing_number) as NUMERIC),0) as housing_number,
 ROUND(cast(SUM(housing_sfr_number) as NUMERIC),0) as housing_sfr_number,
 ROUND(cast(SUM(housing_ch_number) as NUMERIC),0) as housing_ch_number,
@@ -170,7 +170,7 @@ other_storage_area, other_parking_area, other_industrial_area, other_office_area
 parcel_area, parcel_built_area, parcel_built_area_ag, parcel_built_area_ug, parcel_built_area_uc, parcel_area_mean, parcel_built_area_mean,
 
 urban_area_ha,
-g.geometry,
+g.geometry
 from loaded_pois p, urban_area g where st_contains(g.geometry,p.geometry)
 group by g.id);
 

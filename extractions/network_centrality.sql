@@ -1,8 +1,7 @@
 
 with
 
-transportation_geo as (select * from sources.boundaries_geo bg where category = 'boundary-transportation_zone'),
-
+transportation_geo as (select * from sources.boundaries_geo bg where category = '{zone_name}'),
 pois as (
 select id, 
 cast(data ->> 'Origins - Housing - Single Family Residence - Number' as FLOAT)
@@ -16,7 +15,7 @@ nearest_poi as (
 select
 data ->> 'poi_id' poi_id,
 cast(data ->> 'node_id' as integer) node_id
-from networks.alcala_network_relations anr where relation_kind = 'nearest_poi'),
+from networks.amm_network_relations anr where relation_kind = 'nearest_poi'),
 
 length_paths AS (
     SELECT
@@ -24,17 +23,17 @@ length_paths AS (
         kv.key::integer AS end_node_id,
         kv.value::float AS path_length
     FROM
-        networks.alcala_network_paths anp,
+        networks.amm_network_length anp,
         jsonb_each_text(anp.data) AS kv
     WHERE
-        anp.relation_kind = 'length'
+        anp.relation_kind = 'length' and kv.value::float < 100
 ),
 euclidean_paths as (
 select l.*,
 st_length(ST_MakeLine(ans.geometry,ane.geometry)) euclidean_length
 from length_paths l
-join networks.alcala_network_nodes ans on l.start_node_id = ans.node_id ::integer
-join networks.alcala_network_nodes ane on l.end_node_id = ane.node_id ::integer),
+join networks.amm_network_nodes ans on l.start_node_id = ans.node_id ::integer
+join networks.amm_network_nodes ane on l.end_node_id = ane.node_id ::integer),
 
 straightness_centrality as (
 
@@ -42,38 +41,33 @@ select start_node_id node_id, (sum(euclidean_length)/sum(path_length)) straightn
 from euclidean_paths
 group by start_node_id),
 
-betweeness_centrality as (
-select
-b.*,
-(through_paths::float/all_paths::float) betweeness
-from networks.results_betweeness b  
-),
-
 closeness_centrality as (
 SELECT
     split_part(relation_id,'|',2)::integer node_id,
     ROUND(AVG((value::numeric)),0) AS closeness
 FROM
-    networks.alcala_network_paths anp,
+    networks.amm_network_length anp,
     jsonb_each_text(anp.data) AS kv
-WHERE anp.relation_kind = 'length'
+WHERE anp.relation_kind = 'length' and value::numeric < 100
 GROUP BY
     split_part(relation_id,'|',2)),
     
 centrality as (
     
 select
-b.node_id,
-round(b.betweeness::numeric,4) betweeness,
+c.node_id,
 c.closeness,
 round(s.straightness::numeric,4) straightness
 --n.geometry
 from
-betweeness_centrality b
-join closeness_centrality c on b.node_id = c.node_id
-join straightness_centrality s on b.node_id = s.node_id
+closeness_centrality c
+join straightness_centrality s on c.node_id = s.node_id
 --join networks.alcala_network_nodes n on b.node_id = n.node_id::integer
-),
+)
+select * from centrality
+--,
+
+
 
 loaded_pois as (
 
@@ -98,7 +92,7 @@ group by tz_id)
 
 select a.*,g.geometry from aggregated_tz a left join transportation_geo g on a.tz_id = g.id
 
-/*
+
 --betweeness centrality
 select
 b.*,

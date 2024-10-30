@@ -11,7 +11,7 @@ CREATE INDEX sid
   USING GIST (geometry);
  */
 
-delete from sources.pois where category = 'land use - general'
+--delete from sources.pois where category = 'land use - general'
 
 
 --delete from sources.boundaries_geo
@@ -60,19 +60,19 @@ pois as (
 select id, 
 cast(data ->> 'Origins - Housing - Single Family Residence - Number' as FLOAT) +
 cast(data ->> 'Origins - Housing - Collective Housing - Number' as FLOAT) as housing,	
-cast(data ->> 'Origins - Housing - Single Family Residence - Number' as FLOAT) as housing_sfr,
-cast(data ->> 'Origins - Housing - Collective Housing - Number' as FLOAT) as housing_ch,
-cast(data ->> 'Destinations - Healthcare - Multiple - Area' as FLOAT) as care_multiple,
-cast(data ->> 'Destinations - Healthcare - Public - Area' as FLOAT) as care_public,
-cast(data ->> 'Destinations - Educational - Basic - Area' as FLOAT) as edu_basic,
-cast(data ->> 'Destinations - Leisure - Bars and Restaurants - Area' as FLOAT) as leisure_bar,
-cast(data ->> 'Destinations - Leisure - Cultural - Area' as FLOAT) as leisure_cultural,
-cast(data ->> 'Destinations - Leisure - Shows - Area' as FLOAT) as leisure_show,
-cast(data ->> 'Destinations - Leisure - Shows - Area' as FLOAT) as leisure_sports,
-cast(data ->> 'Destinations - Retail - Mall - Area' as FLOAT) as retail_mall,
-cast(data ->> 'Destinations - Retail - Market or Supermarket - Area' as FLOAT) as retail_market,
-cast(data ->> 'Destinations - Retail - Stand Alone Retail - Area' as FLOAT) as retail_alone,
-cast(data ->> 'Destinations - Sport - Multiple - Area' as FLOAT) as sport_area,
+--cast(data ->> 'Origins - Housing - Single Family Residence - Number' as FLOAT) as housing_sfr,
+--cast(data ->> 'Origins - Housing - Collective Housing - Number' as FLOAT) as housing_ch,
+cast(data ->> 'Destinations - Healthcare - Multiple - Area' as FLOAT) +
+cast(data ->> 'Destinations - Healthcare - Public - Area' as FLOAT) as care,
+cast(data ->> 'Destinations - Educational - Basic - Area' as FLOAT) as school,
+cast(data ->> 'Destinations - Leisure - Bars and Restaurants - Area' as FLOAT) +
+cast(data ->> 'Destinations - Leisure - Cultural - Area' as FLOAT) +
+cast(data ->> 'Destinations - Leisure - Shows - Area' as FLOAT) +
+cast(data ->> 'Destinations - Leisure - Shows - Area' as FLOAT) as leisure,
+cast(data ->> 'Destinations - Retail - Mall - Area' as FLOAT) + 
+cast(data ->> 'Destinations - Retail - Market or Supermarket - Area' as FLOAT) +
+cast(data ->> 'Destinations - Retail - Stand Alone Retail - Area' as FLOAT) as shopping,
+cast(data ->> 'Destinations - Sport - Multiple - Area' as FLOAT) as sport,
 
 cast(data ->> 'Parcel Area' as float) as parcel_area,
 cast(data ->> 'Parcel Built Area' as float) as parcel_built_area,

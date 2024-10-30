@@ -1,6 +1,8 @@
+--select * from networks.amm_network_pois limit 10
+
 with 
 pois_trips as (
-select id poi_id,node_id, 
+select id poi_id,node_id, anr.provider,
 cast(data ->> 'Origins - Housing - Single Family Residence - Number' as FLOAT) 
 + 
 cast(data ->> 'Origins - Housing - Collective Housing - Number' as FLOAT) as housing,
@@ -20,9 +22,9 @@ cast(data ->> 'Destinations - Educational - Basic - Area' as FLOAT) * 0.024 +
 cast(data ->> 'Destinations - Educational - Superior - Area' as FLOAT) * 0.024 as destinations_education,
 geometry
 from sources.pois p
-join (select split_part(relation_id,'|',1) poi_id,split_part(relation_id,'|',2) node_id from networks.alcala_network_relations) anr 
+join (select split_part(relation_id,'|',1) poi_id,split_part(relation_id,'|',2) node_id, provider from networks.amm_network_relations) anr 
 on p.id = anr.poi_id
-where p.category = 'land use - general'),
+where p.category = 'land use - general' and anr.provider = 10),
 
 ego_graphs as 
 (select split_part(relation_id,'|',2) node_id,
@@ -74,7 +76,10 @@ transportation_geo as (select * from sources.boundaries_geo bg where category = 
 
 final_pois as (
 select g.id tz_id,p.* from loaded_pois p, transportation_geo g where st_contains(g.geometry,p.geometry)
-),
+)
+select * from final_pois
+/*
+,
 
 aggregated_tz as (
 select 
@@ -85,4 +90,4 @@ from final_pois
 group by tz_id)
 
 select a.*, g.geometry from aggregated_tz a join transportation_geo g on a.tz_id = g.id
-
+*/
