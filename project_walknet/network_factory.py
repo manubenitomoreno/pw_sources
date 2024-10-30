@@ -87,7 +87,8 @@ class Network:
         road_segments_query = f"SELECT {road_segments_fields} FROM sources.{road_segments_table} s WHERE {road_segments_where}"
         pois_query = f"SELECT * FROM sources.{pois_table} s WHERE {pois_where}"
         
-        spatial_join = """ST_INTERSECTS(ST_Transform(st_setsrid(st_geomfromewkt(st_asewkt(s.geometry)),25830), 25830),st_setsrid(st_geomfromewkt(st_asewkt(e.geometry)),25830))"""
+        #spatial_join = """ST_INTERSECTS(ST_Transform(st_setsrid(st_geomfromewkt(st_asewkt(s.geometry)),25830), 25830),st_setsrid(st_geomfromewkt(st_asewkt(e.geometry)),25830))"""
+        spatial_join = """ST_INTERSECTS(s.geometry,e.geometry)"""
         
         if road_segments_query:
             logger.info("Querying for road segments data")
@@ -105,7 +106,7 @@ class Network:
             else:
                 #TODO APPLY WKT BEFORE INSTANTIATING GPD
                 df = pd.DataFrame.from_dict(self.db.get_query_results(text(road_segments_query)))
-                print(df)
+                
                 df['geometry'] = df['geometry'].apply(wkt.loads)
                 self.data['road_segments'] = gpd.GeoDataFrame(
                     df,
@@ -119,7 +120,7 @@ class Network:
             if extent_table:
                 
                 pois_query = f"SELECT {pois_fields} FROM sources.{pois_table} s, sources.{extent_table} e WHERE {pois_where} AND {spatial_join} AND e.{extent_filter}"
-                                
+                
                 self.data['pois'] = pd.DataFrame.from_dict(
                         self.db.get_query_results(text(pois_query)))
                 self.data['pois']['geometry'] = self.data['pois']['geometry'].apply(wkt.loads)
@@ -164,17 +165,21 @@ class Network:
             os.makedirs(self.path)
             
         # Save dataframes to CSV
-        edges_path = os.path.join(self.path, 'edges.csv')
-        self.edges.to_csv(edges_path, sep=";", index=False)
-        logger.info(f"Saved edges data to {edges_path}")
         
-        nodes_path = os.path.join(self.path, 'nodes.csv')
-        self.nodes.to_csv(nodes_path, sep=";", index=False)
-        logger.info(f"Saved nodes data to {nodes_path}")
+        for id in self.edges['provider'].unique():
+            edges_path = os.path.join(self.path, f'edges_{str(id)}.csv')
+            self.edges.loc[self.edges['provider'] == id].to_csv(edges_path, sep=";", index=False)
+            logger.info(f"Saved edges data to {edges_path}")
         
-        relations_path = os.path.join(self.path, 'relations.csv')
-        self.relations.to_csv(relations_path, sep=";", index=False)
-        logger.info(f"Saved relations data to {relations_path}")
+        for id in self.nodes['provider'].unique():
+            nodes_path = os.path.join(self.path, f'nodes_{str(id)}.csv')
+            self.nodes.loc[self.nodes['provider'] == id].to_csv(nodes_path, sep=";", index=False)
+            logger.info(f"Saved nodes data to {nodes_path}")
+        
+        for id in self.relations['provider'].unique():
+            relations_path = os.path.join(self.path, f'relations_{str(id)}.csv')
+            self.relations.loc[self.relations['provider'] == id].to_csv(relations_path, sep=";", index=False)
+            logger.info(f"Saved relations data to {relations_path}")
         
     def persist_to_db(self, **kwargs):
         # Check if the tables exist
@@ -192,24 +197,29 @@ class Network:
             self.db.create_all(["nodes", "edges", "relations"], 'networks', self.keyname)
         
         # Now, let's upload the data from the CSVs
-        nodes_path = os.path.join(self.path, 'nodes.csv')
-        edges_path = os.path.join(self.path, 'edges.csv')
-        relations_path = os.path.join(self.path, 'relations.csv')
+        nodes_files = [f for f in os.listdir(self.path) if f.startswith('nodes')]
+        edges_files = [f for f in os.listdir(self.path) if f.startswith('edges')]
+        relations_files = [f for f in os.listdir(self.path) if f.startswith('relations')]
+
+        for id in [f.split("_")[1].split(".")[0] for f in nodes_files]:
+            nodes_path = os.path.join(self.path, f'nodes_{id}.csv')
+            nodes_class = self.db.get_table_class("nodes", self.keyname)
+            logger.info(f"Uploading data from {nodes_path} to the database...")
+            self.db.add_data_from_csv(nodes_class, nodes_path)
         
-        nodes_class = self.db.get_table_class("nodes", self.keyname)
-        edges_class = self.db.get_table_class("edges", self.keyname)
-        relations_class = self.db.get_table_class("relations", self.keyname)
-        
-        logger.info(f"Uploading data from {nodes_path} to the database...")
-        self.db.add_data_from_csv(nodes_class, nodes_path)
-        
-        logger.info(f"Uploading data from {edges_path} to the database...")
-        self.db.add_data_from_csv(edges_class, edges_path)
-        
-        logger.info(f"Uploading data from {relations_path} to the database...")
-        self.db.add_data_from_csv(relations_class, relations_path)
-        
-        logger.info("Data uploaded to the database successfully.")
+        for id in [f.split("_")[1].split(".")[0] for f in edges_files]:
+            edges_path = os.path.join(self.path, f'edges_{id}.csv')
+            edges_class = self.db.get_table_class("edges", self.keyname)
+            logger.info(f"Uploading data from {edges_path} to the database...")
+            self.db.add_data_from_csv(edges_class, edges_path)
+
+        for id in [f.split("_")[1].split(".")[0] for f in relations_files]:
+            relations_path = os.path.join(self.path, f'relations_{id}.csv')
+            relations_class = self.db.get_table_class("relations", self.keyname)
+            logger.info(f"Uploading data from {relations_path} to the database...")
+            self.db.add_data_from_csv(relations_class, relations_path)
+            
+            logger.info("Data uploaded to the database successfully.")
         
     def construct(self, **attributes):
         sources_exist, networks_exist = self.check_tables()
@@ -235,41 +245,55 @@ class Network:
         
         if 'shortest_paths' in self.metadata['metrics']:
             tables = self.call_network_tables(['edges'])
-            tables['edges'] = tables['edges'].drop(columns='geometry')
+            
+            #tables['edges'] = tables['edges'].drop(columns='geometry')
             logger.info("Computing shortest paths")
             data_tables = make_shortest_paths(tables['edges'])
-            #print(paths)
             
-            paths_nodes_path = os.path.join(self.path, 'paths_nodes.csv')
-            length_path = os.path.join(self.path, 'length.csv')
-            ego_graphs_path = os.path.join(self.path, 'ego_graphs.csv')
+            #paths_table = f"{self.keyname}_paths"
+            #paths_exist = self.db.table_exists(paths_table, 'networks')
             
-            data_tables['path_nodes'].to_csv(paths_nodes_path, sep=";", index=False)
-            logger.info(f"Saved paths data to {paths_nodes_path}")
-            data_tables['length'].to_csv(length_path, sep=";", index=False)
-            logger.info(f"Saved paths data to {paths_nodes_path}")
-            data_tables['ego_graphs'].to_csv(ego_graphs_path, sep=";", index=False)
-            logger.info(f"Saved paths data to {paths_nodes_path}")
-            
-        #paths_table = f"{self.keyname}_paths"
-        #paths_exist = self.db.table_exists(paths_table, 'networks')
-            
-        #if not paths_exist:
-            #logger.info("Creating tables in the database...")
-            #self.db.create_paths_table(self.keyname)
-        
-        paths_class = self.db.get_table_class("paths", self.keyname)
-        logger.info(f"Uploading data from {paths_path} to the database...")
-        self.db.add_data_from_csv(paths_class, paths_path)
+            length_table = f"{self.keyname}_length"
+            length_exist = self.db.table_exists(length_table, 'networks')
 
-        paths_class = self.db.get_table_class("paths", self.keyname)
-        logger.info(f"Uploading data from {paths_path} to the database...")
-        self.db.add_data_from_csv(paths_class, paths_path)
-        
-        paths_class = self.db.get_table_class("paths", self.keyname)
-        logger.info(f"Uploading data from {paths_path} to the database...")
-        self.db.add_data_from_csv(paths_class, paths_path)
-        
+            ego_table = f"{self.keyname}_ego"
+            ego_exist = self.db.table_exists(ego_table, 'networks')
+                
+            #if not paths_exist:
+                #logger.info("Creating tables in the database...")
+                #self.db.create_paths_table(self.keyname)
+            if not length_exist:
+                logger.info("Creating tables in the database...")
+                self.db.create_length_table(self.keyname)
+            if not ego_exist:
+                logger.info("Creating tables in the database...")
+                self.db.create_ego_table(self.keyname)
+            """
+            for id in data_tables['path_nodes'].loc[data_tables['path_nodes']['provider'].notnull()]['provider'].unique():
+                paths_nodes_path = os.path.join(self.path, f'paths_nodes_{str(int(id))}.csv')
+                data_tables['path_nodes'][data_tables['path_nodes']['provider']==id].to_csv(paths_nodes_path, sep=";", index=False)
+                logger.info(f"Saved paths data to {paths_nodes_path}")
+                paths_class = self.db.get_table_class("paths", self.keyname)
+                logger.info(f"Uploading data from {paths_nodes_path} to the database...")
+                self.db.add_data_from_csv(paths_class, paths_nodes_path)
+            """
+
+            for id in data_tables['length'].loc[data_tables['length']['provider'].notnull()]['provider'].unique():
+                length_path = os.path.join(self.path, f'length_{str(int(id))}.csv')
+                data_tables['length'][data_tables['length']['provider']==id].to_csv(length_path, sep=";", index=False)
+                logger.info(f"Saved paths length data to {length_path}")
+                length_class = self.db.get_table_class("length", self.keyname)
+                logger.info(f"Uploading data from {length_path} to the database...")
+                self.db.add_data_from_csv(length_class, length_path)
+
+            for id in data_tables['ego_graphs'].loc[data_tables['ego_graphs']['provider'].notnull()]['provider'].unique():
+                ego_graphs_path = os.path.join(self.path, f'ego_graphs_{str(int(id))}.csv')
+                data_tables['ego_graphs'][data_tables['ego_graphs']['provider']==id].to_csv(ego_graphs_path, sep=";", index=False)
+                logger.info(f"Saved ego graphs data to {ego_graphs_path}")
+                ego_class = self.db.get_table_class("ego", self.keyname)
+                logger.info(f"Uploading data from {ego_graphs_path} to the database...")
+                self.db.add_data_from_csv(ego_class, ego_graphs_path)
+                    
     def run(self, action: str, **kwargs) -> None:
         assert action in ['construct','persist','metrics','reset-database','reset-files'], "Specify a correct action for the network"
         

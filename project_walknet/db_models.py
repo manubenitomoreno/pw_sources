@@ -5,6 +5,8 @@ from sqlalchemy.ext.declarative import declarative_base
 from sqlalchemy.exc import SQLAlchemyError
 from sqlalchemy import text
 
+import json
+
 from configparser import ConfigParser
 import os
 
@@ -16,7 +18,7 @@ Base = declarative_base()
 
 class POIs(Base):
     __tablename__ = 'pois'
-    __table_args__ = {'schema': 'sources'}
+    __table_args__ = {'schema': 'sources','extend_existing': True}
 
     id = Column(String(300), primary_key=True)
     id_class = Column(String(20))
@@ -27,7 +29,7 @@ class POIs(Base):
     
 class AOIs(Base):
     __tablename__ = 'aois'
-    __table_args__ = {'schema': 'sources'}
+    __table_args__ = {'schema': 'sources','extend_existing': True}
 
     id = Column(String(300), primary_key=True)
     id_class = Column(String(20))
@@ -38,7 +40,7 @@ class AOIs(Base):
 
 class RoadSegments(Base):
     __tablename__ = 'road_segments'
-    __table_args__ = {'schema': 'sources'}
+    __table_args__ = {'schema': 'sources','extend_existing': True}
 
     id = Column(Integer, Sequence('user_id_seq'), primary_key=True)
     id_class = Column(String(50))
@@ -49,7 +51,7 @@ class RoadSegments(Base):
     
 class BoundariesGeo(Base):
     __tablename__ = 'boundaries_geo'
-    __table_args__ = {'schema': 'sources'}
+    __table_args__ = {'schema': 'sources','extend_existing': True}
 
     id = Column(String(300), primary_key=True)
     id_class = Column(String(50))
@@ -60,7 +62,7 @@ class BoundariesGeo(Base):
 
 class BoundariesData(Base):
     __tablename__ = 'boundaries_data'
-    __table_args__ = {'schema': 'sources'}
+    __table_args__ = {'schema': 'sources','extend_existing': True}
 
     id = Column(String(300), primary_key=True)
     geo_id = Column(String(300)) # this is the foreign key
@@ -71,7 +73,7 @@ class BoundariesData(Base):
     
 class OtherData(Base):
     __tablename__ = 'other_data'
-    __table_args__ = {'schema': 'sources'}
+    __table_args__ = {'schema': 'sources','extend_existing': True}
 
     id = Column(Integer, Sequence('user_id_seq'), primary_key=True)
     id_class = Column(String(50))
@@ -84,8 +86,10 @@ def create_nodes_table(prefix=""):
         #return globals()[f"{prefix}Nodes"]
     class Nodes(Base):
         __tablename__ = f'{prefix}_nodes' if prefix else 'nodes'
-        __table_args__ = {'schema': 'networks'}
+        __table_args__ = {'schema': 'networks','extend_existing': True}
         node_id = Column(Integer, primary_key=True)
+        provider = Column(Integer)
+        data = Column(JSONB)
         geometry = Column(Geometry(geometry_type='POINT'))
 
     return Nodes
@@ -95,8 +99,9 @@ def create_edges_table(prefix=""):
         #return globals()[f"{prefix}Nodes"]
     class Edges(Base):
         __tablename__ = f'{prefix}_edges' if prefix else 'edges'
-        __table_args__ = {'schema': 'networks'}
+        __table_args__ = {'schema': 'networks','extend_existing': True}
         edge_id = Column(Integer, primary_key=True)
+        provider = Column(Integer)
         data = Column(JSONB)
         start = Column(Integer)
         end = Column(Integer)
@@ -109,8 +114,9 @@ def create_relations_table(prefix=""):
         #return globals()[f"{prefix}Nodes"]
     class Relations(Base):
         __tablename__ = f'{prefix}_relations' if prefix else 'relations'
-        __table_args__ = {'schema': 'networks'}
+        __table_args__ = {'schema': 'networks','extend_existing': True}
         relation_id = Column(String(300), primary_key=True)
+        provider = Column(Integer)
         relation_kind = Column(String(300))
         data = Column(JSONB)
 
@@ -119,8 +125,9 @@ def create_relations_table(prefix=""):
 def create_paths_table(prefix=""):
     class Paths(Base):
         __tablename__ = f'{prefix}_paths' if prefix else 'paths'
-        __table_args__ = {'schema': 'networks'}
+        __table_args__ = {'schema': 'networks','extend_existing': True}
         relation_id = Column(String(300), primary_key=True)
+        provider = Column(Integer)
         relation_kind = Column(String(300))
         data = Column(JSONB)
 
@@ -129,12 +136,24 @@ def create_paths_table(prefix=""):
 def create_ego_table(prefix=""):
     class Ego(Base):
         __tablename__ = f'{prefix}_ego' if prefix else 'ego'
-        __table_args__ = {'schema': 'networks'}
+        __table_args__ = {'schema': 'networks','extend_existing': True}
         relation_id = Column(String(300), primary_key=True)
+        provider = Column(Integer)
         relation_kind = Column(String(300))
         data = Column(JSONB)
 
     return Ego
+
+def create_length_table(prefix=""):
+    class Length(Base):
+        __tablename__ = f'{prefix}_length' if prefix else 'length'
+        __table_args__ = {'schema': 'networks','extend_existing': True}
+        relation_id = Column(String(300), primary_key=True)
+        provider = Column(Integer)
+        relation_kind = Column(String(300))
+        data = Column(JSONB)
+
+    return Length
 
 class DBManager:
     def __init__(self):
@@ -168,6 +187,7 @@ class DBManager:
             Relations = create_relations_table(prefix)
             Paths = create_paths_table(prefix)
             Ego = create_ego_table(prefix)
+            Length = create_length_table(prefix)
             
             # Add them to Base metadata
             tables_to_create = [
@@ -175,16 +195,16 @@ class DBManager:
                 Edges.metadata.tables.get(f"{Edges.__table_args__['schema']}.{Edges.__tablename__}"),
                 Relations.metadata.tables.get(f"{Relations.__table_args__['schema']}.{Relations.__tablename__}"),
                 Paths.metadata.tables.get(f"{Paths.__table_args__['schema']}.{Paths.__tablename__}"),
+                Length.metadata.tables.get(f"{Length.__table_args__['schema']}.{Length.__tablename__}"),
                 Ego.metadata.tables.get(f"{Ego.__table_args__['schema']}.{Ego.__tablename__}"),
             ]
             Base.metadata.create_all(self.engine, tables=tables_to_create)
 
     def add_data_from_csv(self, table_class, csv_file_path):
-        import json
+        
         data = pd.read_csv(csv_file_path, sep = ";",encoding='latin-1')
         
         if 'data' in data.columns:
-            
             
             data['data'] = data['data'].astype(str).str.replace("'",'"')
             try: 
@@ -260,7 +280,7 @@ class DBManager:
             }
 
         # If it's one of the dynamic tables, then generate it using the prefix
-        if table_name in ["nodes", "edges", "relations", "paths", "ego"]:
+        if table_name in ["nodes", "edges", "relations", "paths", "ego", "length"]:
             if table_name == "nodes":
                 return create_nodes_table(prefix)
             elif table_name == "edges":
@@ -270,7 +290,9 @@ class DBManager:
             elif table_name == "paths":
                 return create_paths_table(prefix)
             elif table_name == "ego":
-                return create_paths_table(prefix)
+                return create_ego_table(prefix)
+            elif table_name == "length":
+                return create_length_table(prefix)
         
         # Otherwise, use the static mapping
         return static_table_mapping.get(table_name) or ValueError(f"Unrecognized table name: {table_name}")
@@ -300,7 +322,7 @@ class DBManager:
     def delete_network_data(self, network_name):
         """Delete all data for a specific network in the database."""
         # The table names associated with this network
-        table_names = [f"{network_name}_nodes", f"{network_name}_edges", f"{network_name}_relations", f"{network_name}_paths",f"{network_name}_ego"]
+        table_names = [f"{network_name}_nodes", f"{network_name}_edges", f"{network_name}_relations", f"{network_name}_paths",f"{network_name}_ego",f"{network_name}_length"]
 
         for table_name in table_names:
             if self.table_exists(table_name, target_schema="networks"):
