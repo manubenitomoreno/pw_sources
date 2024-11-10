@@ -24,3 +24,9 @@ fn_far_localacc:
     proximity: ['300','600','900']
     pois: True
   sql_file: "fn_design"
+
+poi_far_localacc:
+  description: "POIS level Local Accessibility and Floor Area Ratio to relevant land use classes"
+  params:
+    proximity: ['300','600','900']
+  sql_file: "poi_far_localacc"
