@@ -218,6 +218,10 @@ def calculate_speed_by_slope(network: gpd.GeoDataFrame, length_attribute: str, s
     network['speed_down'] = network.apply(lambda row: tobler_speed_down (row[length_attribute],row[slope_attribute]),axis=1)
     network['time_up'] = network[length_attribute] / network['speed_up']
     network['time_down'] = network[length_attribute] / network['speed_down']
+
+    network.replace([np.inf, -np.inf], np.nan, inplace=True)
+    network.fillna(0, inplace=True)
+
     return(network)
 
 
