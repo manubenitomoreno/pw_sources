@@ -208,6 +208,10 @@ class Network:
             self.db.add_data_from_csv(nodes_class, nodes_path)
         
         for id in [f.split("_")[1].split(".")[0] for f in edges_files]:
+            if id=='20':
+                print(os.path.join(self.path, f'edges_{id}.csv'))
+                print(self.db.get_table_class("edges_", self.keyname))
+                print("YO")
             edges_path = os.path.join(self.path, f'edges_{id}.csv')
             edges_class = self.db.get_table_class("edges", self.keyname)
             logger.info(f"Uploading data from {edges_path} to the database...")
