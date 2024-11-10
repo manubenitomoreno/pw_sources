@@ -1,16 +1,6 @@
---EXPLAIN ANALYZE
---ALTER TABLE sources.pois DROP COLUMN sid;
 
---CREATE INDEX sid
-  --ON sources.pois 
-  --USING GIST (geometry);
-SELECT 
-distinct (category)
-FROM sources.pois
-WHERE category = 'land use - park'
---where category = 'land use - park'
-
-CREATE MATERIALIZED VIEW precomputed_pois AS
+--DROP MATERIALIZED VIEW precomputed_pois_300;
+CREATE MATERIALIZED VIEW precomputed_pois_300 AS
 
 WITH 
 
@@ -36,8 +26,8 @@ sociodemo as
 (
 select
 split_part(id,'-',1) boundary_id,
-nullif(cast(data ->> 'population' as float),-999) as population,
-nullif(cast(data ->> 'mean_household_size' as float ),-999) as mean_household_size
+nullif(GREATEST(cast(data ->> 'population' as float),0),0) as population,
+nullif(GREATEST(cast(data ->> 'mean_household_size' as float ),0),0) as mean_household_size
 from sources.boundaries_data bd where category = 'sociodemographic'),
 
 census_geo as (
@@ -149,14 +139,14 @@ final_mode_lines AS (
 transit_count as (
 SELECT 
     fl.node_id,
-    array_length(all_mode_lines, 1) AS unique_mode_lines_count,
+    array_length(all_mode_lines, 1) AS acc_transportation,
 	geometry
 FROM 
     final_mode_lines fl 
 join (select node_id, geometry from networks.amm_network_nodes) nn on fl.node_id = nn.node_id)
 
 
-select poi_id,population,unique_mode_lines_count,geometry from pois_table np
+select poi_id,population,acc_transportation,geometry from pois_table np
 join transit_count tc on np.node_id=tc.node_id
 ;
 -----------------------------------
@@ -169,12 +159,15 @@ transportation_geo AS (
 
 pois_tz as (
 SELECT
-precomputed_pois.*,id tz_id
-FROM precomputed_pois
+pp.*,id tz_id
+FROM precomputed_pois_300 pp
 JOIN transportation_geo sd 
-ON sd.geometry && precomputed_pois.geometry
-AND ST_Within(precomputed_pois.geometry, sd.geometry)),
+ON sd.geometry && pp.geometry
+AND ST_Within(pp.geometry, sd.geometry))--,
 
+SELECT * FROM pois_tz
+
+/*
 zones_aggregated as (
 select
 tz_id,
@@ -183,4 +176,4 @@ from pois_tz
 group by tz_id)
 
 select z.*,st_Astext(tg.geometry) geometry from zones_aggregated z left join transportation_geo tg on z.tz_id = tg.id 
-
+*/

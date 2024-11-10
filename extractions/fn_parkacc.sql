@@ -1,4 +1,5 @@
-CREATE MATERIALIZED VIEW precomputed_parks AS
+--DROP MATERIALIZED VIEW precomputed_parks_300
+CREATE MATERIALIZED VIEW precomputed_parks_300 AS
 
 WITH 
 
@@ -34,8 +35,8 @@ sociodemo as
 (
   SELECT
     split_part(id,'-',1) boundary_id,
-    nullif(cast(data ->> 'population' as float),-999) as population,
-    nullif(cast(data ->> 'mean_household_size' as float ),-999) as mean_household_size
+    nullif(greatest(cast(data ->> 'population' as float),0),0) as population,
+    nullif(greatest(cast(data ->> 'mean_household_size' as float ),0),0) as mean_household_size
   FROM sources.boundaries_data bd 
   WHERE category = 'sociodemographic'
 ),
@@ -78,7 +79,7 @@ select l.*,n.node_id from loaded_pois l left join nearest_poi n on l.poi_id = n.
 ego_graphs AS (
   SELECT 
     CAST(SPLIT_PART(relation_id, '|', 2) AS INTEGER) AS node_id,
-    ARRAY(SELECT (jsonb_array_elements_text((data->>'900')::jsonb))::INT) AS reachable_nodes
+    ARRAY(SELECT (jsonb_array_elements_text((data->>'300')::jsonb))::INT) AS reachable_nodes
   FROM networks.amm_network_ego 
   WHERE relation_kind = 'ego_graphs'
 ),
@@ -150,12 +151,16 @@ transportation_geo AS (
 
 pois_tz as (
 SELECT
-precomputed_parks.*,id tz_id
-FROM precomputed_parks
+pp.*,id tz_id
+FROM precomputed_parks_300 pp
 JOIN transportation_geo sd 
-ON sd.geometry && precomputed_parks.geometry
-AND ST_Within(precomputed_parks.geometry, sd.geometry)),
+ON sd.geometry && pp.geometry
+AND ST_Within(pp.geometry, sd.geometry))--,
 
+SELECT * FROM pois_tz
+
+
+/*
 zones_aggregated as (
 select
 tz_id,park_type,
@@ -166,3 +171,4 @@ group by tz_id,park_type)
 select z.*,st_Astext(tg.geometry) geometry from zones_aggregated z 
 left join transportation_geo tg on z.tz_id = tg.id where park_type is not null
 
+*/

@@ -10,15 +10,16 @@ from networks.amm_network_relations anr where relation_kind = 'nearest_poi'),
 
 ego_graphs as 
 (select cast(split_part(relation_id,'|',2) as integer) node_id,
-string_to_array(trim(both '[]' from data ->> '900'),',') as ego_900
+string_to_array(trim(both '[]' from data ->> '300'),',') as ego
+--string_to_array(trim(both '[]' from data ->> '{proximity}'),',') as ego_{proximity}
 from networks.amm_network_ego where relation_kind = 'ego_graphs'),
 
 sociodemo as
 (
 select
 split_part(id,'-',1) boundary_id,
-nullif(cast(data ->> 'population' as float),-999) as population,
-nullif(cast(data ->> 'mean_household_size' as float ),-999) as mean_household_size
+nullif(greatest(cast(data ->> 'population' as float),0),0) as population,
+nullif(greatest(cast(data ->> 'mean_household_size' as float ),0),0) as mean_household_size
 from sources.boundaries_data bd where category = 'sociodemographic'),
 
 census_geo as (
@@ -169,7 +170,8 @@ loaded_pois AS (
 	),
 
 pois_table as (
-select l.*,n.node_id, e.ego_900 from loaded_pois l left join nearest_poi n on l.poi_id = n.poi_id left join ego_graphs e on n.node_id = e.node_id
+select l.*,n.node_id, e.ego from loaded_pois l left join nearest_poi n on l.poi_id = n.poi_id left join ego_graphs e on n.node_id = e.node_id
+--select l.*,n.node_id, e.ego_{proximity} from loaded_pois l left join nearest_poi n on l.poi_id = n.poi_id left join ego_graphs e on n.node_id = e.node_id
 ),
 	
 node_populations AS (
@@ -230,7 +232,8 @@ node_populations AS (
 ),
 
 unnested_ego AS (
-    SELECT poi_id, cast(UNNEST(ego_900) as integer) as node_id
+    SELECT poi_id, cast(UNNEST(ego) as integer) as node_id
+	--SELECT poi_id, cast(UNNEST(ego_{proximity}) as integer) as node_id
     FROM pois_table
 ),
 
@@ -290,38 +293,40 @@ FROM unnested_ego
 JOIN node_populations ON unnested_ego.node_id = node_populations.node_id 
 GROUP BY unnested_ego.poi_id),
 
-reloaded_pois as (select m.*,l.population local_population, l.geometry from metrics_on_ego m join loaded_pois l on m.poi_id = l.poi_id ),
+reloaded_pois as (
+select m.*,l.population local_population, l.geometry from metrics_on_ego m join loaded_pois l on m.poi_id = l.poi_id),
 
 final_pois as (
 SELECT
 g.id tz_id,
+p.poi_id,
 local_population,
 p.population DENS_POP_TOTAL,
 p.housing_number DENS_HOU_TOTAL,
-ROUND(CAST(p.parcel_built_area / p.parcel_area AS NUMERIC),2) DENS_FAR,
-ROUND(CAST(p.parcel_built_ag / p.parcel_area AS NUMERIC), 2) DENS_FAR_AG,
-ROUND(CAST((p.unbuilt_area*100) / p.parcel_area AS NUMERIC),2) DEN_PERC_UNBUILT,
+ROUND(CAST(p.parcel_built_area / nullif(p.parcel_area,0) AS NUMERIC),2) DENS_FAR,
+ROUND(CAST(p.parcel_built_ag / nullif(p.parcel_area,0) AS NUMERIC), 2) DENS_FAR_AG,
+ROUND(CAST((p.unbuilt_area*100) / nullif(p.parcel_area,0) AS NUMERIC),2) DEN_PERC_UNBUILT,
 p.parcel_built_area DENS_BUILT_TOTAL,
-ROUND(CAST((p.housing_sfr_area*100) / p.parcel_built_area AS NUMERIC),2) DEN_PERC_HOUSING_SFR,
-ROUND(CAST((p.housing_ch_area*100) / p.parcel_built_area AS NUMERIC),2) DEN_PERC_HOUSING_CH,
-ROUND(CAST((p.care_multiple_area*100) / p.parcel_built_area AS NUMERIC),2) DEN_PERC_CARE_OTHER,
-ROUND(CAST((p.care_public_area*100) / p.parcel_built_area AS NUMERIC),2) DEN_PERC_CARE_PUBLIC,
-ROUND(CAST((p.school_superior_area*100) / p.parcel_built_area AS NUMERIC),2) PERC_FAR_SCHOOL_SUPERIOR,
-ROUND(CAST((p.school_basic_area*100) / p.parcel_built_area AS NUMERIC),2) DEN_PERC_SCHOOL_BASIC,
-ROUND(CAST((p.leisure_bar_area*100) / p.parcel_built_area AS NUMERIC),2) DEN_PERC_LEISURE_BAR,
-ROUND(CAST((p.leisure_cultural_area*100) / p.parcel_built_area AS NUMERIC),2) DEN_PERC_LEISURE_CULTURAL,
-ROUND(CAST((p.leisure_shows_area*100) / p.parcel_built_area AS NUMERIC),2) DEN_PERC_LEISURE_SHOWS,
-ROUND(CAST((p.shopping_mall_area*100) / p.parcel_built_area AS NUMERIC),2) DEN_PERC_SHOPPING_MALL,
-ROUND(CAST((p.shopping_market_area*100) / p.parcel_built_area AS NUMERIC),2) DEN_PERC_SHOPPING_MARKET,
-ROUND(CAST((p.shopping_alone_area*100) / p.parcel_built_area AS NUMERIC),2) DEN_PERC_SHOPPING_ALONE,
-ROUND(CAST((p.sport_multiple_area*100) / p.parcel_built_area AS NUMERIC),2) DEN_PERC_SPORT_OTHER,
-ROUND(CAST((p.office_area*100) / p.parcel_built_area AS NUMERIC),2) DEN_PERC_OFFICE,
-ROUND(CAST((p.industrial_area*100) / p.parcel_built_area AS NUMERIC),2) DEN_PERC_INDUSTRIAL,
-ROUND(CAST((p.storage_area*100) / p.parcel_built_area AS NUMERIC),2) DEN_PERC_STORAGE,
-ROUND(CAST((p.parking_area*100) / p.parcel_built_area AS NUMERIC),2) DEN_PERC_PARKING,
-ROUND(CAST((p.hotel_area*100) / p.parcel_built_area AS NUMERIC),2) DEN_PERC_HOTEL,
-ROUND(CAST((p.religious_area*100) / p.parcel_built_area AS NUMERIC),2) DEN_PERC_RELIGIOUS,
-ROUND(CAST((p.infra_area*100) / p.parcel_built_area AS NUMERIC),2) DEN_PERC_INFRA,
+ROUND(CAST((p.housing_sfr_area*100) / nullif(p.parcel_built_area,0) AS NUMERIC),2) DEN_PERC_HOUSING_SFR,
+ROUND(CAST((p.housing_ch_area*100) / nullif(p.parcel_built_area,0) AS NUMERIC),2) DEN_PERC_HOUSING_CH,
+ROUND(CAST((p.care_multiple_area*100) / nullif(p.parcel_built_area,0) AS NUMERIC),2) DEN_PERC_CARE_OTHER,
+ROUND(CAST((p.care_public_area*100) / nullif(p.parcel_built_area,0) AS NUMERIC),2) DEN_PERC_CARE_PUBLIC,
+ROUND(CAST((p.school_superior_area*100) / nullif(p.parcel_built_area,0) AS NUMERIC),2) DEN_PERC_SCHOOL_SUPERIOR,
+ROUND(CAST((p.school_basic_area*100) / nullif(p.parcel_built_area,0) AS NUMERIC),2) DEN_PERC_SCHOOL_BASIC,
+ROUND(CAST((p.leisure_bar_area*100) / nullif(p.parcel_built_area,0) AS NUMERIC),2) DEN_PERC_LEISURE_BAR,
+ROUND(CAST((p.leisure_cultural_area*100) / nullif(p.parcel_built_area,0) AS NUMERIC),2) DEN_PERC_LEISURE_CULTURAL,
+ROUND(CAST((p.leisure_shows_area*100) / nullif(p.parcel_built_area,0) AS NUMERIC),2) DEN_PERC_LEISURE_SHOWS,
+ROUND(CAST((p.shopping_mall_area*100) / nullif(p.parcel_built_area,0) AS NUMERIC),2) DEN_PERC_SHOPPING_MALL,
+ROUND(CAST((p.shopping_market_area*100) / nullif(p.parcel_built_area,0) AS NUMERIC),2) DEN_PERC_SHOPPING_MARKET,
+ROUND(CAST((p.shopping_alone_area*100) / nullif(p.parcel_built_area,0) AS NUMERIC),2) DEN_PERC_SHOPPING_ALONE,
+ROUND(CAST((p.sport_multiple_area*100) / nullif(p.parcel_built_area,0) AS NUMERIC),2) DEN_PERC_SPORT_OTHER,
+ROUND(CAST((p.office_area*100) / nullif(p.parcel_built_area,0) AS NUMERIC),2) DEN_PERC_OFFICE,
+ROUND(CAST((p.industrial_area*100) / nullif(p.parcel_built_area,0) AS NUMERIC),2) DEN_PERC_INDUSTRIAL,
+ROUND(CAST((p.storage_area*100) / nullif(p.parcel_built_area,0) AS NUMERIC),2) DEN_PERC_STORAGE,
+ROUND(CAST((p.parking_area*100) / nullif(p.parcel_built_area,0) AS NUMERIC),2) DEN_PERC_PARKING,
+ROUND(CAST((p.hotel_area*100) / nullif(p.parcel_built_area,0) AS NUMERIC),2) DEN_PERC_HOTEL,
+ROUND(CAST((p.religious_area*100) / nullif(p.parcel_built_area,0) AS NUMERIC),2) DEN_PERC_RELIGIOUS,
+ROUND(CAST((p.infra_area*100) / nullif(p.parcel_built_area,0) AS NUMERIC),2) DEN_PERC_INFRA,
 
 care_multiple_number ACC_CARE_OTHER,
 care_public_number ACC_CARE_PUBLIC,
@@ -333,11 +338,14 @@ leisure_shows_number ACC_LEISURE_SHOWS,
 shopping_mall_number ACC_SHOPPING_MALL,
 shopping_market_number ACC_SHOPPING_MARKET,
 shopping_alone_number ACC_SHOPPING_ALONE,
-sport_multiple_number ACC_SPORT_OTHER
-
+sport_multiple_number ACC_SPORT_OTHER,
+p.geometry
 FROM reloaded_pois p, transportation_geo g where st_contains(g.geometry,p.geometry)
-),
+)
 
+SELECT * FROM final_pois
+
+/*
 zones_aggregated as (
 select
 tz_id,
@@ -351,7 +359,7 @@ ROUND(cast(SUM(DEN_PERC_HOUSING_SFR * local_population) / nullif(sum(local_popul
 ROUND(cast(SUM(DEN_PERC_HOUSING_CH * local_population) / nullif(sum(local_population),0) as NUMERIC),2) as DEN_PERC_HOUSING_CH,
 ROUND(cast(SUM(DEN_PERC_CARE_OTHER * local_population) / nullif(sum(local_population),0) as NUMERIC),2) as DEN_PERC_CARE_OTHER,
 ROUND(cast(SUM(DEN_PERC_CARE_PUBLIC * local_population) / nullif(sum(local_population),0) as NUMERIC),2) as DEN_PERC_CARE_PUBLIC,
-ROUND(cast(SUM(PERC_FAR_SCHOOL_SUPERIOR * local_population) / nullif(sum(local_population),0) as NUMERIC),2) as PERC_FAR_SCHOOL_SUPERIOR,
+ROUND(cast(SUM(PERC_FAR_SCHOOL_SUPERIOR * local_population) / nullif(sum(local_population),0) as NUMERIC),2) as DEN_PERC_FAR_SCHOOL_SUPERIOR,
 ROUND(cast(SUM(DEN_PERC_SCHOOL_BASIC * local_population) / nullif(sum(local_population),0) as NUMERIC),2) as DEN_PERC_SCHOOL_BASIC,
 ROUND(cast(SUM(DEN_PERC_LEISURE_BAR * local_population) / nullif(sum(local_population),0) as NUMERIC),2) as DEN_PERC_LEISURE_BAR,
 ROUND(cast(SUM(DEN_PERC_LEISURE_CULTURAL * local_population) / nullif(sum(local_population),0) as NUMERIC),2) as DEN_PERC_LEISURE_CULTURAL,
@@ -384,7 +392,7 @@ group by tz_id)
 select z.*,zt.geometry
 from zones_aggregated z join transportation_geo zt on z.tz_id = zt.id
 where dens_pop_total is not null
-
+*/
 
 
 

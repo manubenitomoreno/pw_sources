@@ -10,15 +10,15 @@ from networks.amm_network_relations anr where relation_kind = 'nearest_poi'),
 
 ego_graphs as 
 (select cast(split_part(relation_id,'|',2) as integer) node_id,
-string_to_array(trim(both '[]' from data ->> '900'),',') as ego_900
+string_to_array(trim(both '[]' from data ->> '300'),',') as ego
 from networks.amm_network_ego where relation_kind = 'ego_graphs'),
 
 sociodemo as
 (
 select
 split_part(id,'-',1) boundary_id,
-nullif(cast(data ->> 'population' as float),-999) as population,
-nullif(cast(data ->> 'mean_household_size' as float ),-999) as mean_household_size
+nullif(greatest(cast(data ->> 'population' as float),0),0) as population,
+nullif(greatest(cast(data ->> 'mean_household_size' as float),0),0) as mean_household_size
 from sources.boundaries_data bd where category = 'sociodemographic'),
 
 census_geo as (
@@ -125,7 +125,7 @@ loaded_pois AS (
 	),
 
 pois_table as (
-select l.*,n.node_id, e.ego_900 from loaded_pois l left join nearest_poi n on l.poi_id = n.poi_id left join ego_graphs e on n.node_id = e.node_id
+select l.*,n.node_id, e.ego from loaded_pois l left join nearest_poi n on l.poi_id = n.poi_id left join ego_graphs e on n.node_id = e.node_id
 ),
 	
 node_populations AS (
@@ -142,7 +142,7 @@ node_populations AS (
 ),
 
 unnested_ego AS (
-    SELECT poi_id, cast(UNNEST(ego_900) as integer) as node_id
+    SELECT poi_id, cast(UNNEST(ego) as integer) as node_id
     FROM pois_table
 ),
 
@@ -164,6 +164,7 @@ reloaded_pois as (select m.*,l.population local_population, l.geometry from metr
 final_pois as (
 SELECT
 g.id tz_id,
+poi_id,
 local_population,
 housing_number,
 ROUND(CAST(
@@ -220,11 +221,14 @@ ROUND(CAST(
 case 
 	when housing_number < sport_trips then sport_trips - housing_number
 	when housing_number > sport_trips then (housing_number - sport_trips)*(-1)
-end as numeric),2) as DIV_UT_SPORT
+end as numeric),2) as DIV_UT_SPORT,
+p.geometry
 
 FROM reloaded_pois p, transportation_geo g where st_contains(g.geometry,p.geometry)
-),
+)--,
 
+SELECT * FROM final_pois
+/*
 zones_aggregated as (
 select
 tz_id,
@@ -247,6 +251,6 @@ select z.*,zt.geometry
 from zones_aggregated z join transportation_geo zt on z.tz_id = zt.id
 --where dens_pop_total is not null
 
-
+*/
 
 

@@ -7,8 +7,8 @@ sociodemo as
 (
 select
 split_part(id,'-',1) boundary_id,
-nullif(cast(data ->> 'population' as float),-999) as population,
-nullif(cast(data ->> 'mean_household_size' as float ),-999) as mean_household_size
+nullif(greatest(cast(data ->> 'population' as float),0),0) as population,
+nullif(greatest(cast(data ->> 'mean_household_size' as float ),0),0) as mean_household_size
 from sources.boundaries_data bd where category = 'sociodemographic'),
 
 census_geo as (
@@ -44,7 +44,7 @@ from networks.amm_network_relations anr where relation_kind = 'nearest_poi'),
 
 loaded_pois as (
 
-select n.node_id,c.*--,c.housing,st_astext(c.geometry) geometry
+select n.node_id,c.* --,c.housing,st_astext(c.geometry) geometry
 from pois c
 left join nearest_poi n on c.poi_id = n.poi_id
 ),
