@@ -21,11 +21,11 @@ def make_shortest_paths(edges: pd.DataFrame):
 
     G = nx.from_pandas_edgelist(edges, "start", "end", edge_attr = ["length"]).to_undirected()
     print("Calculating path length")
-    length = {k: {ke: va for ke, va in v.items() if ke !=k } for k,v in tqdm(dict(nx.all_pairs_dijkstra_path_length(G, cutoff = 900, weight='length')).items())}
+    length = {k: {ke: va for ke, va in v.items() if ke !=k } for k,v in tqdm(dict(nx.all_pairs_dijkstra_path_length(G, cutoff = 1500, weight='length')).items())}
     #print("Calculating path nodes")
     #path_nodes = {k: {ke: va for ke, va in v.items() if ke !=k } for k,v in tqdm(dict(nx.all_pairs_dijkstra_path(G, cutoff = 900, weight='length')).items())}
     print("Calculating ego graphs")
-    ego_graphs = {node: {cut_value :[k for k in nx.single_source_dijkstra_path_length(G, node, cutoff= cut_value, weight='length').keys() if k != node] for cut_value in [300,600,900]} for node in tqdm(list(G.nodes()))}
+    ego_graphs = {node: {cut_value :[k for k in nx.single_source_dijkstra_path_length(G, node, cutoff= cut_value, weight='length').keys() if k != node] for cut_value in [300,600,900,1200,1500]} for node in tqdm(list(G.nodes()))}
     
     length = pd.Series(length).reset_index(drop=False).rename(columns={'index':'node_id',0:'length'})
     ego_graphs = pd.Series(ego_graphs).reset_index(drop=False).rename(columns={'index':'node_id',0:'ego_graphs'})

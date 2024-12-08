@@ -1,5 +1,5 @@
---DROP MATERIALIZED VIEW precomputed_pois_900
-CREATE MATERIALIZED VIEW precomputed_pois_900 AS
+--DROP MATERIALIZED VIEW precomputed_pois_1500
+CREATE MATERIALIZED VIEW precomputed_pois_1500 AS
 
 WITH 
 
@@ -82,13 +82,13 @@ WITH
 
 ego_graphs as 
 (select cast(split_part(relation_id,'|',2) as integer) node_id,
-string_to_array(trim(both '[]' from data ->> '900'),',') as ego
+string_to_array(trim(both '[]' from data ->> '1500'),',') as ego
 from networks.amm_network_ego where relation_kind = 'ego_graphs'),
 
 original_segments as (
 SELECT
 id original_id,
-nullif(cast(data ->> 'length' as float),-999) as segment_length
+nullif(cast(data ->> 'length' as float),0) as segment_length
 FROM sources.road_segments
 ),
 
@@ -179,7 +179,7 @@ fm.avg_segment_length as DES_BLOCK_LENGTH,
 fm.pct_culdesac_length as DES_CULDESAC,
 fm.avg_weighted_slope as DES_SLOPE,
 pp.geometry
-from precomputed_pois_900 pp join final_metrics fm on pp.node_id = fm.node_id)
+from precomputed_pois_1500 pp join final_metrics fm on pp.node_id = fm.node_id)
 /*
 final_pois as (
 select 

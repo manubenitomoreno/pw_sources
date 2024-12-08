@@ -1,5 +1,5 @@
 --DROP MATERIALIZED VIEW precomputed_parks_300
-CREATE MATERIALIZED VIEW precomputed_parks_300 AS
+CREATE MATERIALIZED VIEW precomputed_parks_1500 AS
 
 WITH 
 
@@ -79,7 +79,7 @@ select l.*,n.node_id from loaded_pois l left join nearest_poi n on l.poi_id = n.
 ego_graphs AS (
   SELECT 
     CAST(SPLIT_PART(relation_id, '|', 2) AS INTEGER) AS node_id,
-    ARRAY(SELECT (jsonb_array_elements_text((data->>'300')::jsonb))::INT) AS reachable_nodes
+    ARRAY(SELECT (jsonb_array_elements_text((data->>'1500')::jsonb))::INT) AS reachable_nodes
   FROM networks.amm_network_ego 
   WHERE relation_kind = 'ego_graphs'
 ),
@@ -152,7 +152,7 @@ transportation_geo AS (
 pois_tz as (
 SELECT
 pp.*,id tz_id
-FROM precomputed_parks_300 pp
+FROM precomputed_parks_1500 pp
 JOIN transportation_geo sd 
 ON sd.geometry && pp.geometry
 AND ST_Within(pp.geometry, sd.geometry))--,

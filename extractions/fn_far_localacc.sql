@@ -10,7 +10,7 @@ from networks.amm_network_relations anr where relation_kind = 'nearest_poi'),
 
 ego_graphs as 
 (select cast(split_part(relation_id,'|',2) as integer) node_id,
-string_to_array(trim(both '[]' from data ->> '300'),',') as ego
+string_to_array(trim(both '[]' from data ->> '1500'),',') as ego
 --string_to_array(trim(both '[]' from data ->> '{proximity}'),',') as ego_{proximity}
 from networks.amm_network_ego where relation_kind = 'ego_graphs'),
 
